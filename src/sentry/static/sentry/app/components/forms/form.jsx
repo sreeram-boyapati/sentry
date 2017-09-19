@@ -1,8 +1,8 @@
 import PropTypes from 'prop-types';
 import React from 'react';
-import _ from 'lodash';
+import {Observer} from 'mobx-react';
 
-import FormState from './state';
+import FormModel from './model';
 import {t} from '../../locale';
 
 export default class Form extends React.Component {
@@ -44,7 +44,6 @@ export default class Form extends React.Component {
   }
 
   getChildContext() {
-    let {data, errors} = this.state;
     return {
       form: {
         data,
@@ -56,7 +55,12 @@ export default class Form extends React.Component {
 
   onSubmit = e => {
     e.preventDefault();
-    this.props.onSubmit(this.state.data, this.onSubmitSuccess, this.onSubmitError);
+    console.log(this.model.getData());
+    if (this.model.isSaving) {
+      return;
+    }
+
+    this.props.onSubmit(this.model.getData(), this.onSubmitSuccess, this.onSubmitError);
   };
 
   onSubmitSuccess = data => {
@@ -82,6 +86,7 @@ export default class Form extends React.Component {
     this.props.onSubmitError && this.props.onSubmitError(error);
   };
 
+  // XXX from merge
   onFieldChange = (name, value) => {
     this.setState(state => ({
       data: {
@@ -92,12 +97,8 @@ export default class Form extends React.Component {
   };
 
   render() {
-    let isSaving = this.state.state === FormState.SAVING;
-    let {initialData, data} = this.state;
+    let {isSaving} = this.model;
     let {requireChanges} = this.props;
-    let hasChanges = requireChanges
-      ? Object.keys(data).length && !_.isEqual(data, initialData)
-      : true;
     return (
       <form onSubmit={this.onSubmit} className={this.props.className}>
         {this.state.state === FormState.ERROR && (
@@ -108,6 +109,7 @@ export default class Form extends React.Component {
           </div>
         )}
         {this.props.children}
+
         <div className={this.props.footerClass} style={{marginTop: 25}}>
           <button
             className="btn btn-primary"
