@@ -77,14 +77,16 @@ MANAGERS = ADMINS
 
 APPEND_SLASH = True
 
-PROJECT_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), os.pardir))
+PROJECT_ROOT = os.path.normpath(
+    os.path.join(os.path.dirname(__file__), os.pardir))
 
 # XXX(dcramer): handle case when we've installed from source vs just running
 # this straight out of the repository
 if 'site-packages' in __file__:
     NODE_MODULES_ROOT = os.path.join(PROJECT_ROOT, 'node_modules')
 else:
-    NODE_MODULES_ROOT = os.path.join(PROJECT_ROOT, os.pardir, os.pardir, 'node_modules')
+    NODE_MODULES_ROOT = os.path.join(
+        PROJECT_ROOT, os.pardir, os.pardir, 'node_modules')
 
 NODE_MODULES_ROOT = os.path.normpath(NODE_MODULES_ROOT)
 
@@ -141,20 +143,25 @@ LANGUAGES = (
                                   gettext_noop('Belarusian')), ('bn', gettext_noop('Bengali')),
     ('br', gettext_noop('Breton')), ('bs',
                                      gettext_noop('Bosnian')), ('ca', gettext_noop('Catalan')),
-    ('cs', gettext_noop('Czech')), ('cy', gettext_noop('Welsh')), ('da', gettext_noop('Danish')),
-    ('de', gettext_noop('German')), ('el', gettext_noop('Greek')), ('en', gettext_noop('English')),
+    ('cs', gettext_noop('Czech')), ('cy', gettext_noop(
+        'Welsh')), ('da', gettext_noop('Danish')),
+    ('de', gettext_noop('German')), ('el', gettext_noop(
+        'Greek')), ('en', gettext_noop('English')),
     ('eo', gettext_noop('Esperanto')), ('es',
                                         gettext_noop('Spanish')), ('et', gettext_noop('Estonian')),
     ('eu', gettext_noop('Basque')), ('fa',
                                      gettext_noop('Persian')), ('fi', gettext_noop('Finnish')),
-    ('fr', gettext_noop('French')), ('ga', gettext_noop('Irish')), ('gl', gettext_noop('Galician')),
-    ('he', gettext_noop('Hebrew')), ('hi', gettext_noop('Hindi')), ('hr', gettext_noop('Croatian')),
+    ('fr', gettext_noop('French')), ('ga', gettext_noop(
+        'Irish')), ('gl', gettext_noop('Galician')),
+    ('he', gettext_noop('Hebrew')), ('hi', gettext_noop(
+        'Hindi')), ('hr', gettext_noop('Croatian')),
     ('hu',
      gettext_noop('Hungarian')), ('ia',
                                   gettext_noop('Interlingua')), ('id', gettext_noop('Indonesian')),
     ('is', gettext_noop('Icelandic')), ('it',
                                         gettext_noop('Italian')), ('ja', gettext_noop('Japanese')),
-    ('ka', gettext_noop('Georgian')), ('kk', gettext_noop('Kazakh')), ('km', gettext_noop('Khmer')),
+    ('ka', gettext_noop('Georgian')), ('kk', gettext_noop(
+        'Kazakh')), ('km', gettext_noop('Khmer')),
     ('kn',
      gettext_noop('Kannada')), ('ko',
                                 gettext_noop('Korean')), ('lb', gettext_noop('Luxembourgish')),
@@ -167,17 +174,21 @@ LANGUAGES = (
     ('nl', gettext_noop('Dutch')), ('nn', gettext_noop('Norwegian Nynorsk')),
     ('os', gettext_noop('Ossetic')), ('pa',
                                       gettext_noop('Punjabi')), ('pl', gettext_noop('Polish')),
-    ('pt', gettext_noop('Portuguese')), ('pt-br', gettext_noop('Brazilian Portuguese')),
+    ('pt', gettext_noop('Portuguese')), ('pt-br',
+                                         gettext_noop('Brazilian Portuguese')),
     ('ro', gettext_noop('Romanian')), ('ru', gettext_noop('Russian')),
     ('sk', gettext_noop('Slovak')), ('sl',
                                      gettext_noop('Slovenian')), ('sq', gettext_noop('Albanian')),
     ('sr', gettext_noop('Serbian')), ('sv-se',
                                       gettext_noop('Swedish')), ('sw', gettext_noop('Swahili')),
-    ('ta', gettext_noop('Tamil')), ('te', gettext_noop('Telugu')), ('th', gettext_noop('Thai')),
-    ('tr', gettext_noop('Turkish')), ('tt', gettext_noop('Tatar')), ('udm', gettext_noop('Udmurt')),
+    ('ta', gettext_noop('Tamil')), ('te', gettext_noop(
+        'Telugu')), ('th', gettext_noop('Thai')),
+    ('tr', gettext_noop('Turkish')), ('tt', gettext_noop(
+        'Tatar')), ('udm', gettext_noop('Udmurt')),
     ('uk', gettext_noop('Ukrainian')), ('ur',
                                         gettext_noop('Urdu')), ('vi', gettext_noop('Vietnamese')),
-    ('zh-cn', gettext_noop('Simplified Chinese')), ('zh-tw', gettext_noop('Traditional Chinese')),
+    ('zh-cn', gettext_noop('Simplified Chinese')
+     ), ('zh-tw', gettext_noop('Traditional Chinese')),
 )
 
 from .locale import CATALOGS
@@ -348,7 +359,8 @@ BITBUCKET_CONSUMER_SECRET = ''
 VISUALSTUDIO_APP_ID = ''
 VISUALSTUDIO_APP_SECRET = ''
 VISUALSTUDIO_CLIENT_SECRET = ''
-VISUALSTUDIO_SCOPES = ['vso.work_write', 'vso.project', 'vso.code', 'vso.release']
+VISUALSTUDIO_SCOPES = ['vso.work_write',
+                       'vso.project', 'vso.code', 'vso.release']
 
 SOCIAL_AUTH_PIPELINE = (
     'social_auth.backends.pipeline.user.get_username',
@@ -445,7 +457,8 @@ CELERY_QUEUES = [
         'events.reprocessing.preprocess_event', routing_key='events.reprocessing.preprocess_event'
     ),
     Queue('events.process_event', routing_key='events.process_event'),
-    Queue('events.reprocessing.process_event', routing_key='events.reprocessing.process_event'),
+    Queue('events.reprocessing.process_event',
+          routing_key='events.reprocessing.process_event'),
     Queue('events.reprocess_events', routing_key='events.reprocess_events'),
     Queue('events.save_event', routing_key='events.save_event'),
     Queue('merge', routing_key='merge'),
@@ -478,7 +491,8 @@ create_partitioned_queues('triggers')
 
 from celery.schedules import crontab
 
-CELERYBEAT_SCHEDULE_FILENAME = os.path.join(tempfile.gettempdir(), 'sentry-celerybeat')
+CELERYBEAT_SCHEDULE_FILENAME = os.path.join(
+    tempfile.gettempdir(), 'sentry-celerybeat')
 CELERYBEAT_SCHEDULE = {
     'check-auth': {
         'task': 'sentry.tasks.check_auth',
@@ -727,6 +741,7 @@ SENTRY_FEATURES = {
     'organizations:group-unmerge': False,
     'organizations:integrations-v3': False,
     'organizations:invite-members': True,
+    'organizations:new-settings': False,
     'projects:global-events': False,
     'projects:plugins': True,
     'projects:dsym': False,
@@ -1021,7 +1036,8 @@ SENTRY_SCOPE_SETS = (
         ('member:read', 'Read access to organization members.'),
     ), (
         ('team:admin', 'Read, write, and admin access to teams.'),
-        ('team:write', 'Read and write access to teams.'), ('team:read', 'Read access to teams.'),
+        ('team:write', 'Read and write access to teams.'), ('team:read',
+                                                            'Read access to teams.'),
     ), (
         ('project:admin', 'Read, write, and admin access to projects.'),
         ('project:write',
@@ -1158,10 +1174,12 @@ SENTRY_API_RESPONSE_DELAY = 150 if IS_DEV else None
 SENTRY_WATCHERS = (
     (
         'webpack', [
-            os.path.join(NODE_MODULES_ROOT, '.bin', 'webpack'), '--output-pathinfo', '--watch',
+            os.path.join(NODE_MODULES_ROOT, '.bin',
+                         'webpack'), '--output-pathinfo', '--watch',
             "--config={}".format(
                 os.path.
-                normpath(os.path.join(PROJECT_ROOT, os.pardir, os.pardir, "webpack.config.js"))
+                normpath(os.path.join(PROJECT_ROOT, os.pardir,
+                                      os.pardir, "webpack.config.js"))
             )
         ]
     ),
