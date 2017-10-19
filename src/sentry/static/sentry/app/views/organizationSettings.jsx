@@ -1,7 +1,7 @@
-import {Box} from 'grid-emotion';
 import PropTypes from 'prop-types';
 import React from 'react';
 
+import ApiMixin from '../mixins/apiMixin';
 import {
   BooleanField,
   FormState,
@@ -9,19 +9,11 @@ import {
   TextField,
   TextareaField,
 } from '../components/forms';
-import {extractMultilineFields} from '../utils';
-import {t} from '../locale';
-import ApiMixin from '../mixins/apiMixin';
-import Form from '../components/forms/next/form';
 import IndicatorStore from '../stores/indicatorStore';
 import LoadingIndicator from '../components/loadingIndicator';
-import NewBooleanField from '../components/forms/next/booleanField';
-import NewTextField from '../components/forms/next/textField';
-import NewTextareaField from '../components/forms/next/textareaField';
 import OrganizationStore from '../stores/organizationStore';
-import PanelBody from '../components/forms/next/styled/panelBody';
-import PanelHeader from '../components/forms/next/styled/panelHeader';
-import SettingsPanel from '../components/forms/next/styled/settingsPanel';
+import {t} from '../locale';
+import {extractMultilineFields} from '../utils';
 
 const OrganizationSettingsForm = React.createClass({
   propTypes: {
@@ -632,7 +624,7 @@ const OrganizationSettings = React.createClass({
             <h3>{t('Organization Settings')}</h3>
             <div className="box">
               <div className="box-content with-padding">
-                <NewOrganizationSettingsForm
+                <OrganizationSettingsForm
                   initialData={data}
                   orgId={orgId}
                   access={access}
