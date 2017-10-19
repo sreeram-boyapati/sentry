@@ -32,8 +32,6 @@ import HookStore from './stores/hookStore';
 import MyIssuesAssignedToMe from './views/myIssues/assignedToMe';
 import MyIssuesBookmarked from './views/myIssues/bookmarked';
 import MyIssuesViewed from './views/myIssues/viewed';
-import NewOrganizationGeneralSettings from
-  './views/settings/organization/general/newOrganizationGeneralSettings';
 import NewProject from './views/projectInstall/newProject';
 import OnboardingConfigure from './views/onboarding/configure/index';
 import OnboardingWizard from './views/onboarding/index';
@@ -52,7 +50,7 @@ import OrganizationPicker from './views/settings/components/organizationPicker';
 import OrganizationProjectsView from './views/settings/organization/projects/organizationProjectsView';
 import OrganizationRateLimits from './views/organizationRateLimits';
 import OrganizationRepositories from './views/organizationRepositories';
-import OrganizationSettings from './views/organizationSettings';
+import OrganizationGeneralSettingsView from './views/settings/organization/general/organizationGeneralSettingsView';
 import OrganizationSettingsLayout from './views/settings/organization/organizationSettingsLayout';
 import OrganizationStats from './views/organizationStats';
 import OrganizationTeams from './views/organizationTeams';
@@ -116,6 +114,13 @@ const orgSettingsRoutes = [
   />,
 
   <Route
+    key="settings"
+    path="settings/"
+    name="General"
+    component={errorHandler(OrganizationGeneralSettingsView)}
+  />,
+
+  <Route
     key="api-keys"
     path="api-keys/"
     name="API Key"
@@ -175,7 +180,7 @@ const orgSettingsRoutes = [
   <Route
     key="settings"
     path="settings/"
-    component={errorHandler(OrganizationSettings)}
+    component={errorHandler(OrganizationGeneralSettingsView)}
   />,
 
   <Route key="team-details" path="teams/:teamId/" component={errorHandler(TeamDetails)}>
@@ -281,13 +286,17 @@ function routes() {
           <Route path=":orgId/" component={errorHandler(OrganizationContext)}>
             <Route name="Organizations">
               <Route component={errorHandler(OrganizationSettingsLayout)}>
-                <IndexRoute component={errorHandler(OrganizationSettings)} />
+                <IndexRoute
+                  new
+                  component={errorHandler(OrganizationGeneralSettingsView)}
+                />
 
                 <Route
                   key="settings"
                   path="settings/"
                   name="General"
-                  component={errorHandler(NewOrganizationGeneralSettings)}
+                  new
+                  component={errorHandler(OrganizationGeneralSettingsView)}
                 />
 
                 {orgSettingsRoutes}
