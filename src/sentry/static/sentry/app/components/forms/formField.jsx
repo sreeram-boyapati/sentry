@@ -1,14 +1,11 @@
 import classNames from 'classnames';
-import {Observer, observer} from 'mobx-react';
 import PropTypes from 'prop-types';
 import React from 'react';
-import ReactDOM from 'react-dom';
+import idx from 'idx';
 
 import {defined} from '../../utils';
-import FormState from './state';
 
-@observer
-class FormField extends React.Component {
+export default class FormField extends React.PureComponent {
   static propTypes = {
     name: PropTypes.string.isRequired,
     /** Inline style */
@@ -45,20 +42,18 @@ class FormField extends React.Component {
     };
   }
 
+  componentDidMount() {}
+
   componentWillReceiveProps(nextProps, nextContext) {
-    // XXX merge
-    // if (
-    // this.props.value !== nextProps.value ||
-    // (!defined(this.context.form) && defined(nextContext.form))
-    // ) {
-    // this.setValue(this.getValue(nextProps, nextContext));
-    // }
+    if (
+      this.props.value !== nextProps.value ||
+      (!defined(this.context.form) && defined(nextContext.form))
+    ) {
+      this.setValue(this.getValue(nextProps, nextContext));
+    }
   }
 
-  componentWillUnmount() {
-    //this.removeTooltips();
-    jQuery(ReactDOM.findDOMNode(this)).unbind();
-  }
+  componentWillUnmount() {}
 
   getValue(props, context) {
     let form = (context || this.context || {}).form;
@@ -72,21 +67,27 @@ class FormField extends React.Component {
     return props.defaultValue || '';
   }
 
-  attachTooltips() {
-    jQuery('.tip', ReactDOM.findDOMNode(this)).tooltip();
-  }
-
-  removeTooltips() {
-    jQuery('.tip', ReactDOM.findDOMNode(this)).tooltip('destroy');
-  }
-
   getError(props, context) {
-    return this.context.form.getError(this.props.name);
+    let form = (context || this.context || {}).form;
+    props = props || this.props;
+    if (defined(props.error)) {
+      return props.error;
+    }
+    return idx(form, _ => _.errors[props.name]) || null;
   }
 
   getId() {
     return `id-${this.props.name}`;
   }
+
+  coerceValue(value) {
+    return value;
+  }
+
+  onChange = e => {
+    let value = e.target.value;
+    this.setValue(value);
+  };
 
   setValue = value => {
     let form = (this.context || {}).form;
@@ -101,11 +102,9 @@ class FormField extends React.Component {
     );
   };
 
-  handleBlur = e => {
-    if (!this.context.saveOnBlur) return;
-
-    this.context.form.saveField(this.props.name, e.currentTarget.value);
-  };
+  getField() {
+    throw new Error('Must be implemented by child.');
+  }
 
   render() {
     let {
@@ -119,13 +118,11 @@ class FormField extends React.Component {
       style,
     } = this.props;
     let error = this.getError();
-    let cx = classNames(className, {
+    let cx = classNames(className, this.getClassName(), {
       'has-error': !!error,
       required,
     });
     let shouldShowErrorMessage = error && !hideErrorMessage;
-    let id = this.getId();
-    let model = this.context.form;
 
     return (
       <div style={style} className={cx}>
@@ -149,5 +146,3 @@ class FormField extends React.Component {
     );
   }
 }
-
-export default FormField;
