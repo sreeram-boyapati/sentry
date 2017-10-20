@@ -1,7 +1,7 @@
 const theme = {
   offWhite: '#FBFBFC',
 
-  gray1: '',
+  gray1: '#C1B8CA',
   gray2: '#9788A5',
   gray3: '#655674',
   gray4: '',
