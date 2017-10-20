@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 
+import six
 import logging
 from uuid import uuid4
 
@@ -8,14 +9,16 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 from rest_framework import serializers, status
 from rest_framework.response import Response
-
+from sentry import features
+from sentry.utils.data_filters import FilterTypes
 from sentry.api.base import DocSection
 from sentry.api.bases.project import ProjectEndpoint, ProjectPermission
 from sentry.api.decorators import sudo_required
 from sentry.api.serializers import serialize
 from sentry.api.serializers.models.project import DetailedProjectSerializer
 from sentry.models import (
-    AuditLogEntryEvent, Group, GroupStatus, Project, ProjectBookmark, ProjectStatus, UserOption
+    AuditLogEntryEvent, Group, GroupStatus, Project, ProjectBookmark, ProjectStatus,
+    UserOption, Team,
 )
 from sentry.tasks.deletion import delete_project
 from sentry.utils.apidocs import scenario, attach_scenarios
@@ -33,7 +36,8 @@ def get_project_scenario(runner):
 @scenario('DeleteProject')
 def delete_project_scenario(runner):
     with runner.isolated_project('Plain Proxy') as project:
-        runner.request(method='DELETE', path='/projects/%s/%s/' % (runner.org.slug, project.slug))
+        runner.request(method='DELETE', path='/projects/%s/%s/' %
+                       (runner.org.slug, project.slug))
 
 
 @scenario('UpdateProject')
@@ -53,10 +57,12 @@ def update_project_scenario(runner):
         )
 
 
-def clean_newline_inputs(value):
+def clean_newline_inputs(value, case_insensitive=True):
     result = []
     for v in value.split('\n'):
-        v = v.lower().strip()
+        if case_insensitive:
+            v = v.lower()
+        v = v.strip()
         if v:
             result.append(v)
     return result
@@ -73,6 +79,7 @@ class ProjectAdminSerializer(serializers.Serializer):
     isSubscribed = serializers.BooleanField()
     name = serializers.CharField(max_length=200)
     slug = serializers.RegexField(r'^[a-z0-9_\-]+$', max_length=50)
+    team = serializers.RegexField(r'^[a-z0-9_\-]+$', max_length=50)
     digestsMinDelay = serializers.IntegerField(min_value=60, max_value=3600)
     digestsMaxDelay = serializers.IntegerField(min_value=60, max_value=3600)
     subjectPrefix = serializers.CharField(max_length=200)
@@ -152,6 +159,7 @@ class ProjectDetailsEndpoint(ProjectEndpoint):
         :pparam string project_slug: the slug of the project to delete.
         :param string name: the new name for the project.
         :param string slug: the new slug for the project.
+        :param string team: the slug of new team for the project.
         :param string platform: the new platform for the project.
         :param boolean isBookmarked: in case this API call is invoked with a
                                      user context this allows changing of
@@ -163,8 +171,8 @@ class ProjectDetailsEndpoint(ProjectEndpoint):
         :auth: required
         """
         has_project_write = (
-            (request.auth and request.auth.has_scope('project:write')) or
-            (request.access and request.access.has_scope('project:write'))
+            (request.auth and request.auth.has_scope('project:write'))
+            or (request.access and request.access.has_scope('project:write'))
         )
 
         if has_project_write:
@@ -178,6 +186,16 @@ class ProjectDetailsEndpoint(ProjectEndpoint):
 
         result = serializer.object
 
+        if not has_project_write:
+            for key in six.iterkeys(ProjectAdminSerializer.base_fields):
+                if request.DATA.get(key) and not result.get(key):
+                    return Response(
+                        {
+                            'detail': ['You do not have permission to perform this action.']
+                        },
+                        status=403
+                    )
+
         changed = False
         if result.get('slug'):
             project.slug = result['slug']
@@ -185,6 +203,24 @@ class ProjectDetailsEndpoint(ProjectEndpoint):
 
         if result.get('name'):
             project.name = result['name']
+            changed = True
+
+        if result.get('team'):
+            team_list = [
+                t for t in Team.objects.get_for_user(
+                    organization=project.organization,
+                    user=request.user,
+                )
+                if request.access.has_team_scope(t, 'project:write')
+                if t.slug == result['team']
+            ]
+            if not team_list:
+                return Response(
+                    {
+                        'detail': ['The new team is not found.']
+                    }, status=400
+                )
+            project.team = team_list[0]
             changed = True
 
         if result.get('platform'):
@@ -210,13 +246,17 @@ class ProjectDetailsEndpoint(ProjectEndpoint):
             ).delete()
 
         if result.get('digestsMinDelay'):
-            project.update_option('digests:mail:minimum_delay', result['digestsMinDelay'])
+            project.update_option(
+                'digests:mail:minimum_delay', result['digestsMinDelay'])
         if result.get('digestsMaxDelay'):
-            project.update_option('digests:mail:maximum_delay', result['digestsMaxDelay'])
+            project.update_option(
+                'digests:mail:maximum_delay', result['digestsMaxDelay'])
         if result.get('subjectPrefix'):
-            project.update_option('mail:subject_prefix', result['subjectPrefix'])
+            project.update_option('mail:subject_prefix',
+                                  result['subjectPrefix'])
         if result.get('subjectTemplate'):
-            project.update_option('mail:subject_template', result['subjectTemplate'])
+            project.update_option('mail:subject_template',
+                                  result['subjectTemplate'])
 
         if result.get('isSubscribed'):
             UserOption.objects.set_value(
@@ -231,15 +271,19 @@ class ProjectDetailsEndpoint(ProjectEndpoint):
             options = request.DATA.get('options', {})
             if 'sentry:origins' in options:
                 project.update_option(
-                    'sentry:origins', clean_newline_inputs(options['sentry:origins'])
+                    'sentry:origins', clean_newline_inputs(
+                        options['sentry:origins'])
                 )
             if 'sentry:resolve_age' in options:
-                project.update_option('sentry:resolve_age', int(options['sentry:resolve_age']))
+                project.update_option('sentry:resolve_age', int(
+                    options['sentry:resolve_age']))
             if 'sentry:scrub_data' in options:
-                project.update_option('sentry:scrub_data', bool(options['sentry:scrub_data']))
+                project.update_option('sentry:scrub_data', bool(
+                    options['sentry:scrub_data']))
             if 'sentry:scrub_defaults' in options:
                 project.update_option(
-                    'sentry:scrub_defaults', bool(options['sentry:scrub_defaults'])
+                    'sentry:scrub_defaults', bool(
+                        options['sentry:scrub_defaults'])
                 )
             if 'sentry:safe_fields' in options:
                 project.update_option(
@@ -249,7 +293,8 @@ class ProjectDetailsEndpoint(ProjectEndpoint):
             if 'sentry:sensitive_fields' in options:
                 project.update_option(
                     'sentry:sensitive_fields',
-                    [s.strip().lower() for s in options['sentry:sensitive_fields']]
+                    [s.strip().lower()
+                     for s in options['sentry:sensitive_fields']]
                 )
             if 'sentry:csp_ignored_sources_defaults' in options:
                 project.update_option(
@@ -267,13 +312,43 @@ class ProjectDetailsEndpoint(ProjectEndpoint):
                 )
             if 'sentry:reprocessing_active' in options:
                 project.update_option(
-                    'sentry:reprocessing_active', bool(options['sentry:reprocessing_active'])
+                    'sentry:reprocessing_active', bool(
+                        options['sentry:reprocessing_active'])
                 )
             if 'filters:blacklisted_ips' in options:
                 project.update_option(
                     'sentry:blacklisted_ips',
                     clean_newline_inputs(options['filters:blacklisted_ips'])
                 )
+            if 'filters:{}'.format(FilterTypes.RELEASES) in options:
+                if features.has('projects:custom-inbound-filters', project, actor=request.user):
+                    project.update_option(
+                        'sentry:{}'.format(FilterTypes.RELEASES),
+                        clean_newline_inputs(
+                            options['filters:{}'.format(FilterTypes.RELEASES)])
+                    )
+                else:
+                    return Response(
+                        {
+                            'detail': ['You do not have that feature enabled']
+                        }, status=400
+                    )
+            if 'filters:{}'.format(FilterTypes.ERROR_MESSAGES) in options:
+                if features.has('projects:custom-inbound-filters', project, actor=request.user):
+                    project.update_option(
+                        'sentry:{}'.format(FilterTypes.ERROR_MESSAGES),
+                        clean_newline_inputs(
+                            options['filters:{}'.format(
+                                FilterTypes.ERROR_MESSAGES)],
+                            case_insensitive=False
+                        )
+                    )
+                else:
+                    return Response(
+                        {
+                            'detail': ['You do not have that feature enabled']
+                        }, status=400
+                    )
 
             self.create_audit_entry(
                 request=request,

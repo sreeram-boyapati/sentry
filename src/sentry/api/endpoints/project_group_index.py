@@ -10,18 +10,19 @@ from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.response import Response
 
-from sentry import features, search
+from sentry import features, search, tagstore
 from sentry.api.base import DocSection
 from sentry.api.bases.project import ProjectEndpoint, ProjectEventPermission
 from sentry.api.fields import UserField
 from sentry.api.serializers import serialize
-from sentry.api.serializers.models.group import (SUBSCRIPTION_REASON_MAP, StreamGroupSerializer)
+from sentry.api.serializers.models.group import (
+    SUBSCRIPTION_REASON_MAP, StreamGroupSerializer)
 from sentry.constants import DEFAULT_SORT_OPTION
 from sentry.db.models.query import create_or_update
 from sentry.models import (
     Activity, EventMapping, Group, GroupAssignee, GroupBookmark, GroupHash, GroupResolution,
-    GroupSeen, GroupSnooze, GroupStatus, GroupSubscription, GroupSubscriptionReason, GroupTombstone,
-    Release, TagKey, TOMBSTONE_FIELDS_FROM_GROUP, UserOption
+    GroupSeen, GroupShare, GroupSnooze, GroupStatus, GroupSubscription, GroupSubscriptionReason,
+    GroupTombstone, Release, TOMBSTONE_FIELDS_FROM_GROUP, UserOption
 )
 from sentry.models.event import Event
 from sentry.models.group import looks_like_short_id
@@ -69,7 +70,8 @@ def list_project_issues_scenario(runner):
     project = runner.default_project
     runner.request(
         method='GET',
-        path='/projects/%s/%s/issues/?statsPeriod=24h' % (runner.org.slug, project.slug),
+        path='/projects/%s/%s/issues/?statsPeriod=24h' % (
+            runner.org.slug, project.slug),
     )
 
 
@@ -138,7 +140,8 @@ class StatusDetailsValidator(serializers.Serializer):
 
 
 class GroupValidator(serializers.Serializer):
-    status = serializers.ChoiceField(choices=zip(STATUS_CHOICES.keys(), STATUS_CHOICES.keys()))
+    status = serializers.ChoiceField(choices=zip(
+        STATUS_CHOICES.keys(), STATUS_CHOICES.keys()))
     statusDetails = StatusDetailsValidator()
     hasSeen = serializers.BooleanField()
     isBookmarked = serializers.BooleanField()
@@ -161,13 +164,15 @@ class GroupValidator(serializers.Serializer):
     def validate_assignedTo(self, attrs, source):
         value = attrs[source]
         if value and not self.context['project'].member_set.filter(user=value).exists():
-            raise serializers.ValidationError('Cannot assign to non-team member')
+            raise serializers.ValidationError(
+                'Cannot assign to non-team member')
         return attrs
 
     def validate(self, attrs):
         attrs = super(GroupValidator, self).validate(attrs)
         if len(attrs) > 1 and 'discard' in attrs:
-            raise serializers.ValidationError('Other attributes cannot be updated when discarding')
+            raise serializers.ValidationError(
+                'Other attributes cannot be updated when discarding')
         return attrs
 
 
@@ -200,7 +205,7 @@ class ProjectGroupIndexEndpoint(ProjectEndpoint):
         query_kwargs['sort_by'] = sort_by
 
         tags = {}
-        for tag_key in TagKey.objects.all_keys(project):
+        for tag_key in (tk.key for tk in tagstore.get_tag_keys(project.id)):
             if request.GET.get(tag_key):
                 tags[tag_key] = request.GET[tag_key]
         if tags:
@@ -224,7 +229,8 @@ class ProjectGroupIndexEndpoint(ProjectEndpoint):
                 query_kwargs.update(parse_query(project, query, request.user))
             except InvalidQuery as e:
                 raise ValidationError(
-                    u'Your search query could not be parsed: {}'.format(e.message)
+                    u'Your search query could not be parsed: {}'.format(
+                        e.message)
                 )
 
         return query_kwargs
@@ -307,7 +313,8 @@ class ProjectGroupIndexEndpoint(ProjectEndpoint):
                 else:
                     matching_group = Group.objects.get(id=mapping.group_id)
                     try:
-                        matching_event = Event.objects.get(event_id=query, project_id=project.id)
+                        matching_event = Event.objects.get(
+                            event_id=query, project_id=project.id)
                     except Event.DoesNotExist:
                         pass
 
@@ -329,7 +336,8 @@ class ProjectGroupIndexEndpoint(ProjectEndpoint):
                         [matching_group], request.user,
                         StreamGroupSerializer(
                             stats_period=stats_period,
-                            matching_event_id=getattr(matching_event, 'id', None)
+                            matching_event_id=getattr(
+                                matching_event, 'id', None)
                         )
                     )
                 )
@@ -337,17 +345,18 @@ class ProjectGroupIndexEndpoint(ProjectEndpoint):
                 return response
 
         try:
-            query_kwargs = self._build_query_params_from_request(request, project)
+            query_kwargs = self._build_query_params_from_request(
+                request, project)
         except ValidationError as exc:
             return Response({'detail': six.text_type(exc)}, status=400)
 
-        count_hits = features.has('projects:stream-hit-counts', project=project, actor=request.user)
-
-        cursor_result = search.query(count_hits=count_hits, **query_kwargs)
+        cursor_result = search.query(count_hits=True, **query_kwargs)
 
         results = list(cursor_result)
 
-        context = serialize(results, request.user, StreamGroupSerializer(stats_period=stats_period))
+        context = serialize(
+            results, request.user, StreamGroupSerializer(
+                stats_period=stats_period))
 
         # HACK: remove auto resolved entries
         if query_kwargs.get('status') == GroupStatus.UNRESOLVED:
@@ -415,7 +424,8 @@ class ProjectGroupIndexEndpoint(ProjectEndpoint):
         """
         group_ids = request.GET.getlist('id')
         if group_ids:
-            group_list = Group.objects.filter(project=project, id__in=group_ids)
+            group_list = Group.objects.filter(
+                project=project, id__in=group_ids)
             # filter down group ids to only valid matches
             group_ids = [g.id for g in group_list]
             if not group_ids:
@@ -436,16 +446,20 @@ class ProjectGroupIndexEndpoint(ProjectEndpoint):
 
         if not group_ids:
             try:
-                query_kwargs = self._build_query_params_from_request(request, project)
+                query_kwargs = self._build_query_params_from_request(
+                    request, project)
             except ValidationError as exc:
                 return Response({'detail': six.text_type(exc)}, status=400)
 
             # bulk mutations are limited to 1000 items
             # TODO(dcramer): it'd be nice to support more than this, but its
             # a bit too complicated right now
-            query_kwargs['limit'] = 1000
+            limit = 1000
+            query_kwargs['limit'] = limit
 
-            cursor_result = search.query(**query_kwargs)
+            # the paginator has a default max_limit of 100, which must be overwritten.
+            cursor_result = search.query(
+                paginator_options={'max_limit': limit}, **query_kwargs)
 
             group_list = list(cursor_result)
             group_ids = [g.id for g in group_list]
@@ -546,7 +560,8 @@ class ProjectGroupIndexEndpoint(ProjectEndpoint):
                             defaults=resolution_params,
                         )
                         if not created:
-                            resolution.update(datetime=timezone.now(), **resolution_params)
+                            resolution.update(
+                                datetime=timezone.now(), **resolution_params)
                     else:
                         resolution = None
 
@@ -562,7 +577,8 @@ class ProjectGroupIndexEndpoint(ProjectEndpoint):
                     group.status = GroupStatus.RESOLVED
                     group.resolved_at = now
 
-                    self._subscribe_and_assign_issue(acting_user, group, result)
+                    self._subscribe_and_assign_issue(
+                        acting_user, group, result)
 
                     if created:
                         activity = Activity.objects.create(
@@ -608,10 +624,14 @@ class ProjectGroupIndexEndpoint(ProjectEndpoint):
                         statusDetails.pop('ignoreDuration', None) or
                         statusDetails.pop('snoozeDuration', None)
                     ) or None
-                    ignore_count = statusDetails.pop('ignoreCount', None) or None
-                    ignore_window = statusDetails.pop('ignoreWindow', None) or None
-                    ignore_user_count = statusDetails.pop('ignoreUserCount', None) or None
-                    ignore_user_window = statusDetails.pop('ignoreUserWindow', None) or None
+                    ignore_count = statusDetails.pop(
+                        'ignoreCount', None) or None
+                    ignore_window = statusDetails.pop(
+                        'ignoreWindow', None) or None
+                    ignore_user_count = statusDetails.pop(
+                        'ignoreUserCount', None) or None
+                    ignore_user_window = statusDetails.pop(
+                        'ignoreUserWindow', None) or None
                     if ignore_duration or ignore_count or ignore_user_count:
                         if ignore_duration:
                             ignore_until = timezone.now() + timedelta(
@@ -700,7 +720,8 @@ class ProjectGroupIndexEndpoint(ProjectEndpoint):
         if 'assignedTo' in result:
             if result['assignedTo']:
                 for group in group_list:
-                    GroupAssignee.objects.assign(group, result['assignedTo'], acting_user)
+                    GroupAssignee.objects.assign(
+                        group, result['assignedTo'], acting_user)
 
                     if 'isSubscribed' not in result or result['assignedTo'] != request.user:
                         GroupSubscription.objects.subscribe(
@@ -778,30 +799,35 @@ class ProjectGroupIndexEndpoint(ProjectEndpoint):
                 ),
             }
 
+        if 'isPublic' in result:
+            # We always want to delete an existing share, because triggering
+            # an isPublic=True even when it's already public, should trigger
+            # regenerating.
+            for group in group_list:
+                if GroupShare.objects.filter(group=group).delete():
+                    result['shareId'] = None
+                    Activity.objects.create(
+                        project=group.project,
+                        group=group,
+                        type=Activity.SET_PRIVATE,
+                        user=acting_user,
+                    )
+
         if result.get('isPublic'):
-            queryset.update(is_public=True)
             for group in group_list:
-                if group.is_public:
-                    continue
-                group.is_public = True
-                Activity.objects.create(
+                share, created = GroupShare.objects.get_or_create(
                     project=group.project,
                     group=group,
-                    type=Activity.SET_PUBLIC,
                     user=acting_user,
                 )
-        elif result.get('isPublic') is False:
-            queryset.update(is_public=False)
-            for group in group_list:
-                if not group.is_public:
-                    continue
-                group.is_public = False
-                Activity.objects.create(
-                    project=group.project,
-                    group=group,
-                    type=Activity.SET_PRIVATE,
-                    user=acting_user,
-                )
+                if created:
+                    result['shareId'] = share.uuid
+                    Activity.objects.create(
+                        project=group.project,
+                        group=group,
+                        type=Activity.SET_PUBLIC,
+                        user=acting_user,
+                    )
 
         # XXX(dcramer): this feels a bit shady like it should be its own
         # endpoint
@@ -878,7 +904,7 @@ class ProjectGroupIndexEndpoint(ProjectEndpoint):
         else:
             # missing any kind of filter
             return Response(
-                '{"detail": "You must specify a list of IDs for this operation"}', status=400
+                {"detail": "You must specify a list of IDs for this operation"}, status=400
             )
 
         if not group_list:

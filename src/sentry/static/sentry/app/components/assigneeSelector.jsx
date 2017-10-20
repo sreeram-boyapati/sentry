@@ -1,27 +1,30 @@
+import PropTypes from 'prop-types';
 import React from 'react';
-import ReactDOM from 'react-dom';
 import Reflux from 'reflux';
 import classNames from 'classnames';
-import ApiMixin from '../mixins/apiMixin';
-import Avatar from '../components/avatar';
-import GroupStore from '../stores/groupStore';
-import ConfigStore from '../stores/configStore';
-import DropdownLink from './dropdownLink';
-import MemberListStore from '../stores/memberListStore';
-import MenuItem from './menuItem';
-import LoadingIndicator from '../components/loadingIndicator';
+
+import {t} from '../locale';
 import {userDisplayName} from '../utils/formatters';
 import {valueIsEqual} from '../utils';
+import ApiMixin from '../mixins/apiMixin';
+import Avatar from '../components/avatar';
+import ConfigStore from '../stores/configStore';
+import DropdownReact from './dropdownReact';
+import FlowLayout from './flowLayout';
+import GroupStore from '../stores/groupStore';
+import LoadingIndicator from '../components/loadingIndicator';
+import MemberListStore from '../stores/memberListStore';
+import MenuItem from './menuItem';
 import TooltipMixin from '../mixins/tooltip';
-import {t} from '../locale';
 
 const AssigneeSelector = React.createClass({
   propTypes: {
-    id: React.PropTypes.string.isRequired
+    id: PropTypes.string.isRequired
   },
 
   mixins: [
     Reflux.listenTo(GroupStore, 'onGroupChange'),
+    Reflux.connect(MemberListStore, 'memberList'),
     TooltipMixin({
       selector: '.tip'
     }),
@@ -30,6 +33,7 @@ const AssigneeSelector = React.createClass({
 
   statics: {
     filterMembers(memberList, filter) {
+      if (!memberList) return [];
       if (!filter) return memberList;
 
       filter = filter.toLowerCase();
@@ -60,8 +64,9 @@ const AssigneeSelector = React.createClass({
 
     return {
       assignedTo: group.assignedTo,
-      memberList: MemberListStore.getAll(),
+      memberList: MemberListStore.loaded ? MemberListStore.getAll() : null,
       filter: '',
+      isOpen: false,
       loading: false
     };
   },
@@ -72,27 +77,33 @@ const AssigneeSelector = React.createClass({
       let group = GroupStore.get(this.props.id);
       this.setState({
         assignedTo: group.assignedTo,
-        memberList: MemberListStore.getAll(),
-        loading: loading
+        loading
       });
     }
   },
 
-  // TODO(dcramer): this should check changes in member list
   shouldComponentUpdate(nextProps, nextState) {
-    if (nextState.filter !== this.state.filter) {
+    if (
+      nextState.isOpen !== this.state.isOpen ||
+      nextState.filter !== this.state.filter ||
+      nextState.loading !== this.state.loading
+    ) {
       return true;
     }
-    if (nextState.loading !== this.state.loading) {
+
+    // XXX(billyvg): this means that once `memberList` is not-null, this component will never update due to `memberList` changes
+    // Note: this allows us to show a "loading" state for memberList, but only before `MemberListStore.loadInitialData`
+    // is called
+    if (
+      this.state.memberList === null &&
+      nextState.memberList !== this.state.memberList
+    ) {
       return true;
     }
     return !valueIsEqual(nextState.assignedTo, this.state.assignedTo, true);
   },
 
   componentDidUpdate(prevProps, prevState) {
-    // XXX(dcramer): fix odd dedraw issue as of Chrome 45.0.2454.15 dev (64-bit)
-    let node = jQuery(ReactDOM.findDOMNode(this.refs.container));
-    node.hide().show(0);
     let oldAssignee = prevState.assignedTo && prevState.assignedTo.id;
     let newAssignee = this.state.assignedTo && this.state.assignedTo.id;
     if (oldAssignee !== newAssignee) {
@@ -109,13 +120,13 @@ const AssigneeSelector = React.createClass({
     }
     let group = GroupStore.get(this.props.id);
     this.setState({
-      assignedTo: group.assignedTo,
+      assignedTo: group && group.assignedTo,
       loading: GroupStore.hasStatus(this.props.id, 'assignTo')
     });
   },
 
   assignTo(member) {
-    this.api.assignTo({id: this.props.id, member: member});
+    this.api.assignTo({id: this.props.id, member});
     this.setState({filter: '', loading: true});
   },
 
@@ -126,7 +137,7 @@ const AssigneeSelector = React.createClass({
 
   onFilterKeyUp(evt) {
     if (evt.key === 'Escape') {
-      this.refs.dropdown.close();
+      this.onDropdownClose();
     } else {
       this.setState({
         filter: evt.target.value
@@ -146,12 +157,25 @@ const AssigneeSelector = React.createClass({
     }
   },
 
+  onFilterMount(ref) {
+    if (ref) {
+      // focus filter input
+      ref.focus();
+    }
+  },
+
+  onFilterClick(e) {
+    // Prevent dropdown menu from closing when filter input is clicked
+    e.stopPropagation();
+  },
+
   onDropdownOpen() {
-    ReactDOM.findDOMNode(this.refs.filter).focus();
+    this.setState({isOpen: true});
   },
 
   onDropdownClose() {
     this.setState({
+      isOpen: false,
       filter: ''
     });
   },
@@ -177,83 +201,79 @@ const AssigneeSelector = React.createClass({
   },
 
   render() {
-    let loading = this.state.loading;
-    let assignedTo = this.state.assignedTo;
+    let {loading, assignedTo, filter, memberList} = this.state;
+    let memberListLoading = this.state.memberList === null;
 
-    let className = 'assignee-selector anchor-right';
-    if (!assignedTo) {
-      className += ' unassigned';
-    }
-
-    let members = AssigneeSelector.filterMembers(
-      this.state.memberList,
-      this.state.filter
-    );
-    members = AssigneeSelector.putSessionUserFirst(members);
-
-    let memberNodes = members.map(item => {
-      return (
-        <MenuItem
-          key={item.id}
-          disabled={loading}
-          onSelect={this.assignTo.bind(this, item)}>
-          <Avatar user={item} className="avatar" size={48} />
-          {this.highlight(item.name || item.email, this.state.filter)}
-        </MenuItem>
-      );
+    let className = classNames('assignee-selector anchor-right', {
+      unassigned: !assignedTo
     });
 
-    if (memberNodes.length === 0) {
-      memberNodes = [
-        <li className="not-found" key="no-user">
+    let members = AssigneeSelector.filterMembers(memberList, filter);
+    members = AssigneeSelector.putSessionUserFirst(members);
+
+    let memberNodes = members && members.length
+      ? members.map(item => {
+          return (
+            <MenuItem
+              key={item.id}
+              disabled={loading}
+              onSelect={this.assignTo.bind(this, item)}>
+              <Avatar user={item} className="avatar" size={48} />
+              {this.highlight(item.name || item.email, filter)}
+            </MenuItem>
+          );
+        })
+      : <li className="not-found">
           <span>{t('No matching users found.')}</span>
-        </li>
-      ];
-    }
+        </li>;
 
-    let tooltipTitle = null;
-    if (assignedTo) {
-      tooltipTitle = userDisplayName(assignedTo);
-    }
+    let tooltipTitle = assignedTo ? userDisplayName(assignedTo) : null;
 
+    // Outter div is needed to make tooltip work
     return (
-      <div ref="container">
+      <div>
         <div className={classNames(className, 'tip')} title={tooltipTitle}>
           {loading
-            ? <LoadingIndicator mini={true} />
-            : <DropdownLink
-                ref="dropdown"
+            ? <LoadingIndicator mini />
+            : <DropdownReact
                 className="assignee-selector-toggle"
                 onOpen={this.onDropdownOpen}
                 onClose={this.onDropdownClose}
+                isOpen={this.state.isOpen}
                 title={
                   assignedTo
                     ? <Avatar user={assignedTo} className="avatar" size={48} />
                     : <span className="icon-user" />
                 }>
-                <MenuItem noAnchor={true} key="filter">
-                  <input
-                    type="text"
-                    className="form-control input-sm"
-                    placeholder={t('Filter people')}
-                    ref="filter"
-                    onKeyDown={this.onFilterKeyDown}
-                    onKeyUp={this.onFilterKeyUp}
-                  />
-                </MenuItem>
-                {assignedTo
-                  ? <MenuItem
-                      key="clear"
-                      className="clear-assignee"
-                      disabled={!loading}
-                      onSelect={this.clearAssignTo}>
-                      <span className="icon-circle-cross" /> {t('Clear Assignee')}
-                    </MenuItem>
-                  : ''}
-                <li>
-                  <ul>{memberNodes}</ul>
-                </li>
-              </DropdownLink>}
+                {!memberListLoading &&
+                  <MenuItem noAnchor>
+                    <input
+                      type="text"
+                      className="form-control input-sm"
+                      placeholder={t('Filter people')}
+                      ref={ref => this.onFilterMount(ref)}
+                      onClick={this.onFilterClick}
+                      onKeyDown={this.onFilterKeyDown}
+                      onKeyUp={this.onFilterKeyUp}
+                    />
+                  </MenuItem>}
+                {!memberListLoading &&
+                  assignedTo &&
+                  <MenuItem
+                    className="clear-assignee"
+                    disabled={!loading}
+                    onSelect={this.clearAssignTo}>
+                    <span className="icon-circle-cross" /> {t('Clear Assignee')}
+                  </MenuItem>}
+                {!memberListLoading && memberNodes}
+
+                {memberListLoading &&
+                  <li>
+                    <FlowLayout center className="list-loading-container">
+                      <LoadingIndicator mini />
+                    </FlowLayout>
+                  </li>}
+              </DropdownReact>}
         </div>
       </div>
     );

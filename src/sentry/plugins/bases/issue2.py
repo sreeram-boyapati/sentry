@@ -197,6 +197,11 @@ class IssueTrackingPlugin2(Plugin):
             return Response(auth_errors, status=400)
 
         event = group.get_latest_event()
+        if event is None:
+            return Response({
+                'message': 'Unable to create issues: there are '
+                           'no events associated with this group',
+            }, status=400)
         Event.objects.bind_nodes([event], 'data')
         try:
             fields = self.get_new_issue_fields(request, group, event, **kwargs)
@@ -308,7 +313,8 @@ class IssueTrackingPlugin2(Plugin):
 
     def check_config_and_auth(self, request, group):
         has_auth_configured = self.has_auth_configured()
-        if not (has_auth_configured and self.is_configured(project=group.project, request=request)):
+        if not (has_auth_configured and self.is_configured(
+                project=group.project, request=request)):
             if self.auth_provider:
                 required_auth_settings = settings.AUTH_PROVIDERS[self.auth_provider]
             else:
@@ -316,8 +322,6 @@ class IssueTrackingPlugin2(Plugin):
 
             return {
                 'error_type': 'config',
-                'title': self.get_title(),
-                'slug': self.slug,
                 'has_auth_configured': has_auth_configured,
                 'auth_provider': self.auth_provider,
                 'required_auth_settings': required_auth_settings,
@@ -326,7 +330,6 @@ class IssueTrackingPlugin2(Plugin):
         if self.needs_auth(project=group.project, request=request):
             return {
                 'error_type': 'auth',
-                'title': self.get_title(),
                 'auth_url': reverse('socialauth_associate', args=[self.auth_provider])
             }
 
@@ -338,7 +341,10 @@ class IssueTrackingPlugin2(Plugin):
         item = {
             'slug': self.slug,
             'allowed_actions': self.allowed_actions,
-            'title': self.get_title()
+            # TODO(dcramer): remove in Sentry 8.22+
+            'title': self.get_title(),
+            'name': self.get_title(),
+            'shortName': self.get_short_title(),
         }
         if issue_id:
             item['issue'] = {

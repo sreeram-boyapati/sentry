@@ -32,13 +32,28 @@ def register_plugins(settings):
         except Exception:
             import traceback
             click.echo(
-                "Failed to load plugin %r:\n%s" % (ep.name, traceback.format_exc()), err=True
+                "Failed to load plugin %r:\n%s" % (ep.name, traceback.format_exc()),
+                err=True
             )
         else:
             plugins.register(plugin)
 
     for plugin in plugins.all(version=None):
         init_plugin(plugin)
+
+    from sentry import integrations
+    from sentry.utils.imports import import_string
+    for integration_path in settings.SENTRY_DEFAULT_INTEGRATIONS:
+        try:
+            integration_cls = import_string(integration_path)
+        except Exception:
+            import traceback
+            click.echo(
+                "Failed to load integration %r:\n%s" % (integration_path, traceback.format_exc()),
+                err=True
+            )
+        else:
+            integrations.register(integration_cls)
 
 
 def init_plugin(plugin):
@@ -198,6 +213,7 @@ def configure_structlog():
             structlog.stdlib.PositionalArgumentsFormatter(),
             structlog.processors.format_exc_info,
             structlog.processors.StackInfoRenderer(),
+            structlog.processors.UnicodeDecoder(),
         ]
     }
 

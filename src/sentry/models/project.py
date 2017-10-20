@@ -13,11 +13,12 @@ import warnings
 
 from bitfield import BitField
 from django.conf import settings
-from django.db import models
+from django.db import IntegrityError, models, transaction
 from django.db.models import F
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 
+from sentry import tagstore
 from sentry.app import locks
 from sentry.constants import ObjectStatus
 from sentry.db.models import (
@@ -30,6 +31,18 @@ from sentry.utils.retries import TimedRetryPolicy
 
 # TODO(dcramer): pull in enum library
 ProjectStatus = ObjectStatus
+
+
+class ProjectTeam(Model):
+    __core__ = True
+
+    project = FlexibleForeignKey('sentry.Project')
+    team = FlexibleForeignKey('sentry.Team')
+
+    class Meta:
+        app_label = 'sentry'
+        db_table = 'sentry_projectteam'
+        unique_together = (('project', 'team'), )
 
 
 class ProjectManager(BaseManager):
@@ -78,6 +91,9 @@ class Project(Model):
     forced_color = models.CharField(max_length=6, null=True, blank=True)
     organization = FlexibleForeignKey('sentry.Organization')
     team = FlexibleForeignKey('sentry.Team')
+    teams = models.ManyToManyField(
+        'sentry.Team', related_name='teams', through=ProjectTeam
+    )
     public = models.BooleanField(default=False)
     date_added = models.DateTimeField(default=timezone.now)
     status = BoundedPositiveIntegerField(
@@ -129,7 +145,7 @@ class Project(Model):
         return absolute_uri('/{}/{}/'.format(self.organization.slug, self.slug))
 
     def merge_to(self, project):
-        from sentry.models import (Group, GroupTagValue, Event, TagValue)
+        from sentry.models import (Group, Event)
 
         if not isinstance(project, Project):
             project = Project.objects.get_from_cache(pk=project)
@@ -141,17 +157,17 @@ class Project(Model):
                 )
             except Group.DoesNotExist:
                 group.update(project=project)
-                GroupTagValue.objects.filter(
-                    project_id=self.id,
+                tagstore.update_project_for_group(
                     group_id=group.id,
-                ).update(project_id=project.id)
+                    old_project_id=self.id,
+                    new_project_id=project.id)
             else:
                 Event.objects.filter(
                     group_id=group.id,
                 ).update(group_id=other.id)
 
-                for obj in GroupTagValue.objects.filter(group=group):
-                    obj2, created = GroupTagValue.objects.get_or_create(
+                for obj in tagstore.get_group_tag_values(group_id=group.id):
+                    obj2, created = tagstore.get_or_create_group_tag_value(
                         project_id=project.id,
                         group_id=group.id,
                         key=obj.key,
@@ -161,8 +177,8 @@ class Project(Model):
                     if not created:
                         obj2.update(times_seen=F('times_seen') + obj.times_seen)
 
-        for fv in TagValue.objects.filter(project=self):
-            TagValue.objects.get_or_create(project=project, key=fv.key, value=fv.value)
+        for fv in tagstore.get_tag_values(self.id):
+            tagstore.get_or_create_tag_value(project_id=project.id, key=fv.key, value=fv.value)
             fv.delete()
         self.delete()
 
@@ -174,17 +190,15 @@ class Project(Model):
                 return True
         return False
 
-    def get_tags(self, with_internal=True):
-        from sentry.models import TagKey
+    def get_tags(self):
+        from sentry import tagstore
 
         if not hasattr(self, '_tag_cache'):
             tags = self.get_option('tags', None)
             if tags is None:
-                tags = [
-                    t for t in TagKey.objects.all_keys(self)
-                    if with_internal or not t.startswith('sentry:')
-                ]
+                tags = [t for t in (tk.key for tk in tagstore.get_tag_keys(self.id))]
             self._tag_cache = tags
+
         return self._tag_cache
 
     # TODO: Make these a mixin
@@ -322,3 +336,42 @@ class Project(Model):
                 user, 'workflow:notifications', UserOptionValue.all_conversations
             )
         return opt_value == UserOptionValue.all_conversations
+
+    def transfer_to(self, team):
+        from sentry.models import ReleaseProject
+
+        organization = team.organization
+
+        # We only need to delete ReleaseProjects when moving to a different
+        # Organization. Releases are bound to Organization, so it's not realistic
+        # to keep this link unless we say, copied all Releases as well.
+        if self.organization_id != organization.id:
+            ReleaseProject.objects.filter(
+                project_id=self.id,
+            ).delete()
+
+        self.organization = organization
+        self.team = team
+
+        try:
+            with transaction.atomic():
+                self.update(
+                    organization=organization,
+                    team=team,
+                )
+        except IntegrityError:
+            slugify_instance(self, self.name, organization=organization)
+            self.update(
+                slug=self.slug,
+                organization=organization,
+                team=team,
+            )
+
+    def add_team(self, team):
+        try:
+            with transaction.atomic():
+                ProjectTeam.objects.create(project=self, team=team)
+        except IntegrityError:
+            return False
+        else:
+            return True

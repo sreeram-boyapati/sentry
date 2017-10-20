@@ -1,10 +1,9 @@
 import React from 'react';
 import {shallow, mount} from 'enzyme';
-import toJson from 'enzyme-to-json';
 
 import {Client} from 'app/api';
 import Configure from 'app/views/onboarding/configure';
-import PropTypes from '../../../../../../src/sentry/static/sentry/app/proptypes';
+import SentryTypes from '../../../../../../src/sentry/static/sentry/app/proptypes';
 
 describe('Configure should render correctly', function() {
   beforeEach(function() {
@@ -33,7 +32,7 @@ describe('Configure should render correctly', function() {
 
       let wrapper = shallow(<Configure {...props} />, {
         context: {organization: {id: '1337', slug: 'testOrg', teams: [['testProject']]}},
-        childContextTypes: {organization: PropTypes.Organization}
+        childContextTypes: {organization: SentryTypes.Organization}
       });
 
       const component = wrapper.instance();
@@ -45,7 +44,7 @@ describe('Configure should render correctly', function() {
       );
 
       wrapper.update();
-      expect(toJson(wrapper)).toMatchSnapshot();
+      expect(wrapper).toMatchSnapshot();
       expect(handleSubmitStub.callCount).toEqual(0);
     });
 
@@ -75,7 +74,7 @@ describe('Configure should render correctly', function() {
         }
       });
 
-      expect(toJson(wrapper)).toMatchSnapshot();
+      expect(wrapper).toMatchSnapshot();
       expect(handleSubmitStub.callCount).toEqual(1);
     });
 
@@ -104,10 +103,10 @@ describe('Configure should render correctly', function() {
             ]
           }
         },
-        childContextTypes: {organization: PropTypes.Organization}
+        childContextTypes: {organization: SentryTypes.Organization}
       });
-      expect(toJson(wrapper)).toMatchSnapshot();
-      expect(this.stubbedApiRequest.callCount).toEqual(4);
+      expect(wrapper).toMatchSnapshot();
+      expect(this.stubbedApiRequest.callCount).toEqual(5);
     });
   });
 });

@@ -21,6 +21,11 @@ describe('AssigneeSelector', function() {
     name: 'John Smith',
     email: 'johnsmith@example.com'
   };
+  const USER_3 = {
+    id: 3,
+    name: 'J J',
+    email: 'jj@example.com'
+  };
 
   beforeEach(function() {
     this.sandbox = sinon.sandbox.create();
@@ -87,70 +92,128 @@ describe('AssigneeSelector', function() {
     });
   });
 
-  describe('onFilterKeyDown()', function() {
-    beforeEach(function() {
-      let assigneeSelector = (this.assigneeSelector = mount(
-        <AssigneeSelector id="1337" />
-      ));
+  describe('loading', function() {
+    let assigneeSelector;
+    let openMenu;
 
-      this.assignTo = this.sandbox.stub(assigneeSelector.instance(), 'assignTo');
+    beforeEach(function() {
+      // Reset sandbox because we don't want <LoadingIndicator /> stubbed
+      this.sandbox.restore();
+      this.sandbox = sinon.sandbox.create();
+      this.sandbox.stub(GroupStore, 'get').returns({
+        id: 1337,
+        assignedTo: null
+      });
+      MemberListStore.items = [];
+      MemberListStore.loaded = false;
+      assigneeSelector = mount(<AssigneeSelector id="1337" />);
+      openMenu = () => assigneeSelector.find('a').simulate('click');
+    });
+
+    it('should initially have loading state', function() {
+      openMenu();
+      expect(assigneeSelector.find('LoadingIndicator').exists()).toBe(true);
+    });
+
+    it('does not have loading state and shows member list after calling MemberListStore.loadInitialData', function() {
+      openMenu();
+      MemberListStore.loadInitialData([USER_1, USER_2]);
+
+      expect(assigneeSelector.find('Avatar').length).toBe(2);
+      expect(assigneeSelector.find('LoadingIndicator').exists()).toBe(false);
+    });
+
+    it('does NOT update member list after initial load', function() {
+      openMenu();
+      MemberListStore.loadInitialData([USER_1, USER_2]);
+
+      expect(assigneeSelector.find('Avatar').length).toBe(2);
+      expect(assigneeSelector.find('LoadingIndicator').exists()).toBe(false);
+
+      MemberListStore.loadInitialData([USER_1, USER_2, USER_3]);
+
+      expect(assigneeSelector.find('Avatar').length).toBe(2);
+      expect(assigneeSelector.find('LoadingIndicator').exists()).toBe(false);
+    });
+  });
+
+  describe('onFilterKeyDown()', function() {
+    let assigneeSelector;
+    let assignTo;
+
+    beforeEach(function() {
+      MemberListStore.loaded = true;
+      if (assigneeSelector) {
+        assigneeSelector.unmount();
+      }
+
+      assigneeSelector = mount(<AssigneeSelector id="1337" />);
+      // open menu
+      assigneeSelector.find('a').simulate('click');
+
+      assignTo = this.sandbox.stub(assigneeSelector.instance(), 'assignTo');
+    });
+
+    afterEach(function() {
+      MemberListStore.loaded = false;
     });
 
     it('should assign the first filtered member when the Enter key is pressed and filter is truthy', function() {
-      let assigneeSelector = this.assigneeSelector;
       assigneeSelector.setState({filter: 'Jane'});
 
-      assigneeSelector
-        .ref('filter')
-        .simulate('keyDown', {key: 'Enter', keyCode: 13, which: 13});
+      let filter = assigneeSelector.find('input');
+      filter.simulate('keyDown', {key: 'Enter', keyCode: 13, which: 13});
 
-      expect(this.assignTo.calledOnce).toBeTruthy();
-      expect(this.assignTo.lastCall.args[0]).toHaveProperty('name', 'Jane Doe');
+      expect(assignTo.calledOnce).toBeTruthy();
+      expect(assignTo.lastCall.args[0]).toHaveProperty('name', 'Jane Doe');
     });
 
     it('should do nothing when the Enter key is pressed, but filter is the empty string', function() {
-      let assigneeSelector = this.assigneeSelector;
       assigneeSelector.setState({filter: ''});
 
-      assigneeSelector
-        .ref('filter')
-        .simulate('keyDown', {key: 'Enter', keyCode: 13, which: 13});
+      let filter = assigneeSelector.find('input');
+      filter.simulate('keyDown', {key: 'Enter', keyCode: 13, which: 13});
 
-      expect(this.assignTo.notCalled).toBeTruthy();
+      expect(assignTo.notCalled).toBeTruthy();
     });
 
     it('should do nothing if a non-Enter key is pressed', function() {
-      let assigneeSelector = this.assigneeSelector;
       assigneeSelector.setState({filter: 'Jane'});
 
-      assigneeSelector
-        .ref('filter')
-        .simulate('keyDown', {key: 'h', keyCode: 72, which: 72});
-      expect(this.assignTo.notCalled).toBeTruthy();
+      let filter = assigneeSelector.find('input');
+      filter.simulate('keyDown', {key: 'h', keyCode: 72, which: 72});
+      expect(assignTo.notCalled).toBeTruthy();
     });
   });
 
   describe('onFilterKeyUp()', function() {
+    let assigneeSelector;
     beforeEach(function() {
-      this.assigneeSelector = mount(<AssigneeSelector id="1337" />);
+      MemberListStore.loaded = true;
+      if (assigneeSelector) {
+        assigneeSelector.unmount();
+      }
+
+      assigneeSelector = mount(<AssigneeSelector id="1337" />);
+
+      // open menu
+      assigneeSelector.find('a').simulate('click');
+    });
+
+    afterEach(function() {
+      MemberListStore.loaded = false;
     });
 
     it('should close the dropdown when keyup is triggered with the Escape key', function() {
-      let assigneeSelector = this.assigneeSelector;
-      let closeStub = this.sandbox.stub(
-        assigneeSelector.instance().refs.dropdown,
-        'close'
-      );
+      let filter = assigneeSelector.find('input');
+      filter.simulate('keyUp', {key: 'Escape'});
 
-      assigneeSelector.ref('filter').simulate('keyUp', {key: 'Escape'});
-
-      expect(closeStub.calledOnce).toBeTruthy();
+      expect(assigneeSelector.state('isOpen')).toBe(false);
     });
 
     it('should update the local filter state if any other key is pressed', function() {
-      let assigneeSelector = this.assigneeSelector;
-
-      assigneeSelector.ref('filter').simulate('keyUp', {target: {value: 'foo'}});
+      let filter = assigneeSelector.find('input');
+      filter.simulate('keyUp', {target: {value: 'foo'}});
       expect(assigneeSelector.state('filter')).toEqual('foo');
     });
   });

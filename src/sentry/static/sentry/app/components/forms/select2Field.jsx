@@ -1,9 +1,28 @@
 import jQuery from 'jquery';
+import PropTypes from 'prop-types';
 import React from 'react';
 
 import InputField from './inputField';
 
-class Select2Field extends InputField {
+export default class Select2Field extends InputField {
+  static propTypes = {
+    ...InputField.propTypes,
+    choices: PropTypes.array.isRequired,
+    allowClear: PropTypes.bool,
+    allowEmpty: PropTypes.bool,
+    multiple: PropTypes.bool,
+    escapeMarkup: PropTypes.bool
+  };
+
+  static defaultProps = {
+    ...InputField.defaultProps,
+    allowClear: false,
+    allowEmpty: false,
+    placeholder: '--',
+    escapeMarkup: true,
+    multiple: false
+  };
+
   getField() {
     return (
       <select
@@ -51,31 +70,17 @@ class Select2Field extends InputField {
     };
   }
 
+  getClassName() {
+    return '';
+  }
+
   componentDidMount() {
+    super.componentDidMount();
     jQuery(this.refs.input).select2(this.getSelect2Options()).on('change', this.onChange);
   }
 
   componentWillUnmount() {
     jQuery(this.refs.select).select2('destroy');
+    super.componentWillUnmount();
   }
 }
-
-Select2Field.propTypes = Object.assign(
-  {
-    choices: React.PropTypes.array.isRequired,
-    allowClear: React.PropTypes.bool,
-    allowEmpty: React.PropTypes.bool,
-    multiple: React.PropTypes.bool,
-    escapeMarkup: React.PropTypes.bool
-  },
-  InputField.propTypes
-);
-
-Select2Field.defaultProps = Object.assign({}, InputField.defaultProps, {
-  allowEmpty: false,
-  placeholder: '--',
-  escapeMarkup: true,
-  multiple: false
-});
-
-export default Select2Field;

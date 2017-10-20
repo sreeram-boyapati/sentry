@@ -1,5 +1,9 @@
-import React from 'react';
 import {browserHistory} from 'react-router';
+import PropTypes from 'prop-types';
+import React from 'react';
+
+import {getShortVersion} from '../../utils';
+import {t} from '../../locale';
 import ApiMixin from '../../mixins/apiMixin';
 import CustomIgnoreCountModal from '../../components/customIgnoreCountModal';
 import CustomIgnoreDurationModal from '../../components/customIgnoreDurationModal';
@@ -10,20 +14,19 @@ import GroupActions from '../../actions/groupActions';
 import GroupState from '../../mixins/groupState';
 import IndicatorStore from '../../stores/indicatorStore';
 import IssuePluginActions from '../../components/group/issuePluginActions';
-import MenuItem from '../../components/menuItem';
 import LinkWithConfirmation from '../../components/linkWithConfirmation';
+import MenuItem from '../../components/menuItem';
+import ShareIssue from '../../components/shareIssue';
 import TooltipMixin from '../../mixins/tooltip';
-import {t} from '../../locale';
-import {getShortVersion} from '../../utils';
 
 const ResolveActions = React.createClass({
   propTypes: {
-    group: React.PropTypes.object.isRequired,
-    hasRelease: React.PropTypes.bool.isRequired,
-    latestRelease: React.PropTypes.object,
-    onUpdate: React.PropTypes.func.isRequired,
-    orgId: React.PropTypes.string.isRequired,
-    projectId: React.PropTypes.string.isRequired
+    group: PropTypes.object.isRequired,
+    hasRelease: PropTypes.bool.isRequired,
+    latestRelease: PropTypes.object,
+    onUpdate: PropTypes.func.isRequired,
+    orgId: PropTypes.string.isRequired,
+    projectId: PropTypes.string.isRequired
   },
 
   getInitialState() {
@@ -38,7 +41,7 @@ const ResolveActions = React.createClass({
     });
     this.props.onUpdate({
       status: 'resolved',
-      statusDetails: statusDetails
+      statusDetails
     });
   },
 
@@ -154,8 +157,8 @@ const ResolveActions = React.createClass({
 
 const IgnoreActions = React.createClass({
   propTypes: {
-    group: React.PropTypes.object.isRequired,
-    onUpdate: React.PropTypes.func.isRequired
+    group: PropTypes.object.isRequired,
+    onUpdate: PropTypes.func.isRequired
   },
 
   getInitialState() {
@@ -360,9 +363,9 @@ const IgnoreActions = React.createClass({
 
 const DeleteActions = React.createClass({
   propTypes: {
-    project: React.PropTypes.object.isRequired,
-    onDelete: React.PropTypes.func.isRequired,
-    onDiscard: React.PropTypes.func.isRequired
+    project: PropTypes.object.isRequired,
+    onDelete: PropTypes.func.isRequired,
+    onDiscard: PropTypes.func.isRequired
   },
 
   render() {
@@ -373,7 +376,7 @@ const DeleteActions = React.createClass({
           className="group-remove btn btn-default btn-sm"
           title={t('Delete')}
           message={t(
-            'Deleting this event is permanent. Are you sure you wish to continue?'
+            'Deleting this issue is permanent. Are you sure you wish to continue?'
           )}
           onConfirm={this.props.onDelete}>
           <span className="icon-trash" />
@@ -399,7 +402,7 @@ const DeleteActions = React.createClass({
   }
 });
 
-export default React.createClass({
+const GroupDetailsActions = React.createClass({
   mixins: [
     ApiMixin,
     GroupState,
@@ -410,7 +413,18 @@ export default React.createClass({
   ],
 
   getInitialState() {
-    return {ignoreModal: null};
+    return {ignoreModal: null, shareBusy: false};
+  },
+
+  getShareUrl(shareId, absolute) {
+    if (!shareId) return '';
+
+    let path = `/share/issue/${shareId}/`;
+    if (!absolute) {
+      return path;
+    }
+    let {host, protocol} = window.location;
+    return `${protocol}//${host}${path}`;
   },
 
   onDelete() {
@@ -446,7 +460,7 @@ export default React.createClass({
         orgId: org.slug,
         projectId: project.slug,
         itemIds: [group.id],
-        data: data
+        data
       },
       {
         complete: () => {
@@ -454,6 +468,38 @@ export default React.createClass({
         }
       }
     );
+  },
+
+  onShare(shared) {
+    let group = this.getGroup();
+    let project = this.getProject();
+    let org = this.getOrganization();
+    this.setState({shareBusy: true});
+
+    // not sure why this is a bulkUpdate
+    this.api.bulkUpdate(
+      {
+        orgId: org.slug,
+        projectId: project.slug,
+        itemIds: [group.id],
+        data: {
+          isPublic: shared
+        }
+      },
+      {
+        error: () => {
+          IndicatorStore.add(t('Error sharing'), 'error');
+        },
+        complete: () => {
+          this.setState({shareBusy: false});
+        }
+      }
+    );
+  },
+
+  onToggleShare() {
+    let group = this.getGroup();
+    this.onShare(!group.isPublic);
   },
 
   onToggleBookmark() {
@@ -489,6 +535,7 @@ export default React.createClass({
     let group = this.getGroup();
     let project = this.getProject();
     let org = this.getOrganization();
+    let orgFeatures = new Set(this.getOrganization().features);
 
     let bookmarkClassName = 'group-bookmark btn btn-default btn-sm';
     if (group.isBookmarked) {
@@ -525,6 +572,19 @@ export default React.createClass({
           onDelete={this.onDelete}
           onDiscard={this.onDiscard}
         />
+
+        {orgFeatures.has('shared-issues') &&
+          <div className="btn-group">
+            <ShareIssue
+              shareUrl={this.getShareUrl(group.shareId, true)}
+              isSharing={group.isPublic}
+              group={group}
+              onToggle={this.onToggleShare}
+              onShare={() => this.onShare(true)}
+              busy={this.state.shareBusy}
+            />
+          </div>}
+
         {group.pluginActions.length > 1
           ? <div className="btn-group more">
               <DropdownLink className="btn btn-default btn-sm" title={t('More')}>
@@ -561,3 +621,5 @@ export default React.createClass({
     );
   }
 });
+
+export default GroupDetailsActions;

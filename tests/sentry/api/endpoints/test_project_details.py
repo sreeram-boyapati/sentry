@@ -88,7 +88,76 @@ class ProjectUpdateTest(APITestCase):
         assert project.slug == 'foobar'
         assert project.platform == 'cocoa'
 
+    def test_team_changes(self):
+        project = self.create_project()
+        team = self.create_team()
+        self.login_as(user=self.user)
+        url = reverse(
+            'sentry-api-0-project-details',
+            kwargs={
+                'organization_slug': project.organization.slug,
+                'project_slug': project.slug,
+            }
+        )
+        resp = self.client.put(
+            url, data={
+                'team': team.slug,
+            }
+        )
+        assert resp.status_code == 200, resp.content
+        project = Project.objects.get(id=project.id)
+        assert project.team == team
+
+    def test_team_changes_not_found(self):
+        project = self.create_project()
+        self.login_as(user=self.user)
+        url = reverse(
+            'sentry-api-0-project-details',
+            kwargs={
+                'organization_slug': project.organization.slug,
+                'project_slug': project.slug,
+            }
+        )
+        resp = self.client.put(
+            url, data={
+                'team': 'the-team-that-does-not-exist',
+            }
+        )
+        assert resp.status_code == 400, resp.content
+        assert resp.data['detail'][0] == 'The new team is not found.'
+        project = Project.objects.get(id=project.id)
+        assert project.team == self.team
+
     def test_member_changes(self):
+        project = self.create_project()
+        user = self.create_user('bar@example.com')
+        self.create_member(
+            user=user,
+            organization=project.organization,
+            teams=[project.team],
+            role='member',
+        )
+        self.login_as(user=user)
+        url = reverse(
+            'sentry-api-0-project-details',
+            kwargs={
+                'organization_slug': project.organization.slug,
+                'project_slug': project.slug,
+            }
+        )
+        response = self.client.put(
+            url, data={
+                'isBookmarked': 'true',
+            }
+        )
+        assert response.status_code == 200
+
+        assert ProjectBookmark.objects.filter(
+            user=user,
+            project_id=project.id,
+        ).exists()
+
+    def test_member_changes_permission_denied(self):
         project = self.create_project()
         user = self.create_user('bar@example.com')
         self.create_member(
@@ -111,10 +180,11 @@ class ProjectUpdateTest(APITestCase):
                 'isBookmarked': 'true',
             }
         )
-        assert response.status_code == 200
-        assert response.data['slug'] != 'zzz'
+        assert response.status_code == 403
 
-        assert ProjectBookmark.objects.filter(
+        assert Project.objects.get(id=project.id).slug != 'zzz'
+
+        assert not ProjectBookmark.objects.filter(
             user=user,
             project_id=project.id,
         ).exists()
@@ -138,8 +208,12 @@ class ProjectUpdateTest(APITestCase):
             'sentry:safe_fields': ['token'],
             'sentry:csp_ignored_sources_defaults': False,
             'sentry:csp_ignored_sources': 'foo\nbar',
+            'filters:blacklisted_ips': '127.0.0.1\n198.51.100.0',
+            'filters:releases': '1.*\n2.1.*',
+            'filters:error_messages': 'TypeError*\n*: integer division by modulo or zero',
         }
-        resp = self.client.put(url, data={'options': options})
+        with self.feature('projects:custom-inbound-filters', True):
+            resp = self.client.put(url, data={'options': options})
         assert resp.status_code == 200, resp.content
         project = Project.objects.get(id=project.id)
         assert project.get_option('sentry:origins', []) == options['sentry:origins'].split('\n')
@@ -153,6 +227,11 @@ class ProjectUpdateTest(APITestCase):
                                   True) == options['sentry:csp_ignored_sources_defaults']
         assert project.get_option('sentry:csp_ignored_sources',
                                   []) == options['sentry:csp_ignored_sources'].split('\n')
+        assert project.get_option('sentry:blacklisted_ips') == ['127.0.0.1', '198.51.100.0']
+        assert project.get_option('sentry:releases') == ['1.*', '2.1.*']
+        assert project.get_option('sentry:error_messages') == [
+            'TypeError*', '*: integer division by modulo or zero'
+        ]
 
     def test_bookmarks(self):
         project = self.project  # force creation

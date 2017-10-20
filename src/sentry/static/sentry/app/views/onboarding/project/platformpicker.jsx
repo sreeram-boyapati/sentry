@@ -1,7 +1,8 @@
+import PropTypes from 'prop-types';
 import React from 'react';
-import ListLink from '../../../components/listLink';
 import classnames from 'classnames';
 
+import ListLink from '../../../components/listLink';
 import {flattenedPlatforms, categoryLists} from '../utils';
 import PlatformCard from './platformCard';
 import {t} from '../../../locale';
@@ -10,14 +11,19 @@ const categoryList = Object.keys(categoryLists).concat('All');
 
 const PlatformPicker = React.createClass({
   propTypes: {
-    setPlatform: React.PropTypes.func.isRequired,
-    platform: React.PropTypes.string
+    setPlatform: PropTypes.func.isRequired,
+    platform: PropTypes.string,
+    showOther: PropTypes.bool
+  },
+
+  getDefaultProps() {
+    return {showOther: true};
   },
 
   getInitialState() {
     return {
       tab: categoryList[0],
-      filter: ''
+      filter: (this.props.platform || '').split('-')[0]
     };
   },
 
@@ -28,12 +34,16 @@ const PlatformPicker = React.createClass({
       platform => tab === 'All' || categoryLists[tab].includes(platform.id)
     );
 
-    let subsetMatch = ({id}) => id.includes(this.state.filter);
+    let subsetMatch = ({id}) => id.includes(this.state.filter.toLowerCase());
 
     let filtered = tabSubset.filter(subsetMatch);
 
-    if (!filtered.length) {
+    if (this.state.filter) {
       filtered = flattenedPlatforms.filter(subsetMatch);
+    }
+
+    if (!this.props.showOther) {
+      filtered = filtered.filter(({id}) => id !== 'other');
     }
 
     if (!filtered.length) {
@@ -67,6 +77,7 @@ const PlatformPicker = React.createClass({
   },
 
   render() {
+    let {filter} = this.state;
     return (
       <div className="platform-picker">
         <ul className="nav nav-tabs">
@@ -75,6 +86,7 @@ const PlatformPicker = React.createClass({
               <span className="icon icon-search" />
               <input
                 type="text"
+                value={this.state.filter}
                 className="platform-filter"
                 label="Filter"
                 placeholder="Filter"
@@ -87,11 +99,11 @@ const PlatformPicker = React.createClass({
               <ListLink
                 key={categoryName}
                 onClick={e => {
-                  this.setState({tab: categoryName});
+                  this.setState({tab: categoryName, filter: ''});
                   e.preventDefault();
                 }}
                 to={''}
-                isActive={() => categoryName === this.state.tab}>
+                isActive={() => categoryName === (filter ? 'All' : this.state.tab)}>
                 {categoryName}
               </ListLink>
             );

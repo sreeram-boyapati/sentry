@@ -1,7 +1,7 @@
+import PropTypes from 'prop-types';
 import React from 'react';
 import Reflux from 'reflux';
-import {browserHistory} from 'react-router';
-import {Link} from 'react-router';
+import {Link, browserHistory} from 'react-router';
 import Cookies from 'js-cookie';
 import {StickyContainer, Sticky} from 'react-sticky';
 import classNames from 'classnames';
@@ -27,11 +27,11 @@ import {t, tn, tct} from '../locale';
 
 const Stream = React.createClass({
   propTypes: {
-    defaultSort: React.PropTypes.string,
-    defaultStatsPeriod: React.PropTypes.string,
-    defaultQuery: React.PropTypes.string,
-    maxItems: React.PropTypes.number,
-    setProjectNavSection: React.PropTypes.func
+    defaultSort: PropTypes.string,
+    defaultStatsPeriod: PropTypes.string,
+    defaultQuery: PropTypes.string,
+    maxItems: PropTypes.number,
+    setProjectNavSection: PropTypes.func
   },
 
   mixins: [
@@ -61,7 +61,7 @@ const Stream = React.createClass({
     return {
       groupIds: [],
       isDefaultSearch: null,
-      searchId: searchId,
+      searchId,
       // if we have no query then we can go ahead and fetch data
       loading: searchId || !this.hasQuery() ? true : false,
       savedSearchLoading: true,
@@ -97,9 +97,6 @@ const Stream = React.createClass({
     this.fetchSavedSearches();
     this.fetchProcessingIssues();
     this.fetchTags();
-    if (!this.state.loading) {
-      this.fetchData();
-    }
   },
 
   componentWillReceiveProps(nextProps) {
@@ -108,6 +105,8 @@ const Stream = React.createClass({
     if (this.state.loading) {
       return;
     }
+
+    this.fetchData();
 
     let searchIdChanged = this.state.isDefaultSearch
       ? nextProps.params.searchId
@@ -252,7 +251,7 @@ const Stream = React.createClass({
     savedSearchList.push(data);
     // TODO(dcramer): sort
     this.setState({
-      savedSearchList: savedSearchList
+      savedSearchList
     });
     browserHistory.pushState(null, `/${orgId}/${projectId}/searches/${data.id}/`);
   },
@@ -280,10 +279,10 @@ const Stream = React.createClass({
     }
 
     let newState = {
-      sort: sort,
-      statsPeriod: statsPeriod,
+      sort,
+      statsPeriod,
       query: hasQuery ? currentQuery.query : '',
-      searchId: searchId,
+      searchId,
       isDefaultSearch: false
     };
 
@@ -456,7 +455,7 @@ const Stream = React.createClass({
     let groupIds = this._streamManager.getAllItems().map(item => item.id);
     if (!utils.valueIsEqual(groupIds, this.state.groupIds)) {
       this.setState({
-        groupIds: groupIds
+        groupIds
       });
     }
   },
@@ -475,7 +474,7 @@ const Stream = React.createClass({
     } else {
       this.setState(
         {
-          query: query,
+          query,
           searchId: null
         },
         this.transitionTo
@@ -486,7 +485,7 @@ const Stream = React.createClass({
   onSortChange(sort) {
     this.setState(
       {
-        sort: sort
+        sort
       },
       this.transitionTo
     );
@@ -535,6 +534,20 @@ const Stream = React.createClass({
       : `/${params.orgId}/${params.projectId}/`;
 
     browserHistory.pushState(null, path, queryParams);
+  },
+
+  createSampleEvent() {
+    let params = this.props.params;
+    let url = `/projects/${params.orgId}/${params.projectId}/create-sample/`;
+    this.api.request(url, {
+      method: 'POST',
+      success: data => {
+        browserHistory.pushState(
+          null,
+          `/${params.orgId}/${params.projectId}/issues/${data.groupID}/`
+        );
+      }
+    });
   },
 
   renderProcessingIssuesHint() {
@@ -626,14 +639,24 @@ const Stream = React.createClass({
     let sampleLink = null;
     if (this.state.groupIds.length > 0) {
       let sampleIssueId = this.state.groupIds[0];
+
       sampleLink = (
         <p>
           <Link to={`/${org.slug}/${project.slug}/issues/${sampleIssueId}/?sample`}>
-            {t('Or see a sample Javascript event')}
+            {t('Or see your sample event')}
           </Link>
         </p>
       );
+    } else {
+      sampleLink = (
+        <p>
+          <a onClick={this.createSampleEvent.bind(this, project.platform)}>
+            {t('Create a sample event')}
+          </a>
+        </p>
+      );
     }
+
     return (
       <div className="box awaiting-events">
         <div className="wrap">

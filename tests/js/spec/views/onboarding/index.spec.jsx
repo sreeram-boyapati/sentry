@@ -1,9 +1,9 @@
 import React from 'react';
-import {shallow} from 'enzyme';
-import toJson from 'enzyme-to-json';
+import {shallow, mount} from 'enzyme';
 
 import {Client} from 'app/api';
 import OnboardingWizard from 'app/views/onboarding/';
+import Project from 'app/views/onboarding/project';
 
 describe('OnboardingWizard', function() {
   beforeEach(function() {
@@ -35,7 +35,38 @@ describe('OnboardingWizard', function() {
       let wrapper = shallow(<OnboardingWizard {...props} />, {
         organization: {id: '1337', slug: 'testOrg'}
       });
-      expect(toJson(wrapper)).toMatchSnapshot();
+      expect(wrapper).toMatchSnapshot();
+    });
+
+    it('should render and respond to click events', function() {
+      let props = {
+        ...baseProps,
+        children: (
+          <Project
+            next={jest.fn()}
+            platform={''}
+            setName={jest.fn()}
+            name={''}
+            setPlatform={jest.fn()}
+          />
+        )
+      };
+
+      let wrapper = mount(<OnboardingWizard {...props} />, {
+        context: {
+          organization: {id: '1337', slug: 'testOrg'},
+          router: TestStubs.router()
+        },
+        childContextTypes: {
+          router: React.PropTypes.object,
+          organization: React.PropTypes.object
+        }
+      });
+
+      expect(wrapper).toMatchSnapshot();
+      let node = wrapper.find('PlatformCard').first();
+      node.props().onClick();
+      expect(wrapper).toMatchSnapshot();
     });
   });
 });

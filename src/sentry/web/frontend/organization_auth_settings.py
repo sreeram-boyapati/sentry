@@ -11,6 +11,7 @@ from django.utils.translation import ugettext_lazy as _
 from sentry import features, roles
 from sentry.auth import manager
 from sentry.auth.helper import AuthHelper
+from sentry.auth.providers.saml2 import SAML2Provider, HAS_SAML2
 from sentry.models import AuditLogEntryEvent, AuthProvider, OrganizationMember
 from sentry.plugins import Response
 from sentry.tasks.auth import email_missing_links
@@ -147,16 +148,6 @@ class OrganizationAuthSettingsView(OrganizationView):
 
         return self.respond('sentry/organization-auth-provider-settings.html', context)
 
-    def handle_provider_setup(self, request, organization, provider_key):
-        helper = AuthHelper(
-            request=request,
-            organization=organization,
-            provider_key=provider_key,
-            flow=AuthHelper.FLOW_SETUP_PROVIDER,
-        )
-        helper.init_pipeline()
-        return helper.next_step()
-
     @transaction.atomic
     def handle(self, request, organization):
         if not features.has('organizations:sso', organization, actor=request.user):
@@ -187,11 +178,40 @@ class OrganizationAuthSettingsView(OrganizationView):
             if not manager.exists(provider_key):
                 raise ValueError('Provider not found: {}'.format(provider_key))
 
+            helper = AuthHelper(
+                request=request,
+                organization=organization,
+                provider_key=provider_key,
+                flow=AuthHelper.FLOW_SETUP_PROVIDER,
+            )
+
+            feature = helper.provider.required_feature
+            if feature and not features.has(feature, organization, actor=request.user):
+                return HttpResponse('Provider is not enabled', status=401)
+
+            if request.POST.get('init'):
+                helper.init_pipeline()
+
+            if not helper.pipeline_is_valid():
+                return helper.error('Something unexpected happened during authentication.')
+
             # render first time setup view
-            return self.handle_provider_setup(request, organization, provider_key)
+            return helper.current_step()
+
+        provider_list = []
+
+        for k, v in manager:
+            if issubclass(v, SAML2Provider) and not HAS_SAML2:
+                continue
+
+            feature = v.required_feature
+            if feature and not features.has(feature, organization, actor=request.user):
+                continue
+
+            provider_list.append((k, v.name))
 
         context = {
-            'provider_list': [(k, v.name) for k, v in manager],
+            'provider_list': provider_list,
         }
 
         return self.respond('sentry/organization-auth-settings.html', context)

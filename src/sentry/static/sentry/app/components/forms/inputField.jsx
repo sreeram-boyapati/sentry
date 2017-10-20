@@ -1,4 +1,5 @@
 import jQuery from 'jquery';
+import PropTypes from 'prop-types';
 import React from 'react';
 import ReactDOM from 'react-dom';
 import FormField from './formField';
@@ -6,17 +7,19 @@ import FormField from './formField';
 export default class InputField extends FormField {
   static propTypes = {
     ...FormField.propTypes,
-    placeholder: React.PropTypes.string
+    placeholder: PropTypes.string
   };
 
   // XXX(dcramer): this comes from TooltipMixin
   componentDidMount() {
+    super.componentDidMount();
     this.attachTooltips();
   }
 
   componentWillUnmount() {
     this.removeTooltips();
     jQuery(ReactDOM.findDOMNode(this)).unbind();
+    super.componentWillUnmount();
   }
 
   attachTooltips() {

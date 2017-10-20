@@ -7,6 +7,7 @@ sentry.event_manager
 """
 from __future__ import absolute_import, print_function
 
+import functools
 import logging
 import math
 import six
@@ -20,7 +21,7 @@ from django.utils.encoding import force_bytes, force_text
 from hashlib import md5
 from uuid import uuid4
 
-from sentry import eventtypes, features, buffer
+from sentry import eventtypes, features, buffer, tagstore
 # we need a bunch of unexposed functions from tsdb
 from sentry.tsdb import backend as tsdb
 from sentry.constants import (
@@ -29,7 +30,7 @@ from sentry.constants import (
 from sentry.interfaces.base import get_interface
 from sentry.models import (
     Activity, Environment, Event, EventMapping, EventUser, Group, GroupHash, GroupRelease,
-    GroupResolution, GroupStatus, Project, Release, ReleaseEnvironment, ReleaseProject, TagKey,
+    GroupResolution, GroupStatus, Project, Release, ReleaseEnvironment, ReleaseProject,
     UserReport
 )
 from sentry.plugins import plugins
@@ -42,6 +43,9 @@ from sentry.utils.safe import safe_execute, trim, trim_dict
 from sentry.utils.strings import truncatechars
 from sentry.utils.validators import validate_ip
 from sentry.stacktraces import normalize_in_app
+
+
+DEFAULT_FINGERPRINT_VALUES = frozenset(['{{ default }}', '{{default}}'])
 
 
 def count_limit(count):
@@ -87,7 +91,8 @@ def get_hashes_for_event_with_reason(event):
         if not result:
             continue
         return (interface.get_path(), result)
-    return ('message', [event.message])
+
+    return ('no_interfaces', [''])
 
 
 def get_grouping_behavior(event):
@@ -98,10 +103,9 @@ def get_grouping_behavior(event):
     return ('fingerprint', get_hashes_from_fingerprint_with_reason(event, fingerprint))
 
 
-def get_hashes_from_fingerprint(event, fingerprint):
-    default_values = set(['{{ default }}', '{{default}}'])
-    if any(d in fingerprint for d in default_values):
-        default_hashes = get_hashes_for_event(event)
+def _get_hashes_from_fingerprint(get_hash_inputs, fingerprint):
+    if any(d in fingerprint for d in DEFAULT_FINGERPRINT_VALUES):
+        default_hashes = get_hash_inputs()
         hash_count = len(default_hashes)
     else:
         hash_count = 1
@@ -110,7 +114,7 @@ def get_hashes_from_fingerprint(event, fingerprint):
     for idx in range(hash_count):
         result = []
         for bit in fingerprint:
-            if bit in default_values:
+            if bit in DEFAULT_FINGERPRINT_VALUES:
                 result.extend(default_hashes[idx])
             else:
                 result.append(bit)
@@ -118,9 +122,15 @@ def get_hashes_from_fingerprint(event, fingerprint):
     return hashes
 
 
+def get_hashes_from_fingerprint(event, fingerprint):
+    return _get_hashes_from_fingerprint(
+        functools.partial(get_hashes_for_event, event),
+        fingerprint,
+    )
+
+
 def get_hashes_from_fingerprint_with_reason(event, fingerprint):
-    default_values = set(['{{ default }}', '{{default}}'])
-    if any(d in fingerprint for d in default_values):
+    if any(d in fingerprint for d in DEFAULT_FINGERPRINT_VALUES):
         default_hashes = get_hashes_for_event_with_reason(event)
         hash_count = len(default_hashes[1])
     else:
@@ -129,7 +139,7 @@ def get_hashes_from_fingerprint_with_reason(event, fingerprint):
     hashes = OrderedDict((bit, []) for bit in fingerprint)
     for idx in range(hash_count):
         for bit in fingerprint:
-            if bit in default_values:
+            if bit in DEFAULT_FINGERPRINT_VALUES:
                 hashes[bit].append(default_hashes)
             else:
                 hashes[bit] = bit
@@ -249,7 +259,7 @@ class EventManager(object):
             data['logger'] = DEFAULT_LOGGER_NAME
         else:
             logger = trim(data['logger'].strip(), 64)
-            if TagKey.is_valid_key(logger):
+            if tagstore.is_valid_key(logger):
                 data['logger'] = logger
             else:
                 data['logger'] = DEFAULT_LOGGER_NAME
@@ -449,6 +459,7 @@ class EventManager(object):
             datetime=date,
             **kwargs
         )
+        event._project_cache = project
 
         # convert this to a dict to ensure we're only storing one value per key
         # as most parts of Sentry dont currently play well with multiple values
@@ -750,7 +761,7 @@ class EventManager(object):
             return
 
         euser = EventUser(
-            project=project,
+            project_id=project.id,
             ident=user_data.get('id'),
             email=user_data.get('email'),
             username=user_data.get('username'),
@@ -773,7 +784,7 @@ class EventManager(object):
             except IntegrityError:
                 try:
                     euser = EventUser.objects.get(
-                        project=project,
+                        project_id=project.id,
                         hash=euser.hash,
                     )
                 except EventUser.DoesNotExist:
@@ -844,11 +855,22 @@ class EventManager(object):
         # should be better tested/reviewed
         if existing_group_id is None:
             kwargs['score'] = ScoreClause.calculate(1, kwargs['last_seen'])
+            # it's possible the release was deleted between
+            # when we queried for the release and now, so
+            # make sure it still exists
+            first_release = kwargs.pop('first_release', None)
+
             with transaction.atomic():
                 short_id = project.next_short_id()
                 group, group_is_new = Group.objects.create(
-                    project=project, short_id=short_id, **kwargs
+                    project=project,
+                    short_id=short_id,
+                    first_release_id=Release.objects.filter(
+                        id=first_release.id,
+                    ).values_list('id', flat=True).first() if first_release else None,
+                    **kwargs
                 ), True
+
         else:
             group = Group.objects.get(id=existing_group_id)
 

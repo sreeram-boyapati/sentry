@@ -10,6 +10,7 @@ from sentry.web.frontend.debug.debug_assigned_email import (
 )
 from sentry.web.frontend.debug.debug_trigger_error import (DebugTriggerErrorView)
 from sentry.web.frontend.debug.debug_error_embed import (DebugErrorPageEmbedView)
+from sentry.web.frontend.debug.debug_invalid_identity_email import DebugInvalidIdentityEmailView
 from sentry.web.frontend.debug.debug_mfa_added_email import (DebugMfaAddedEmailView)
 from sentry.web.frontend.debug.debug_mfa_removed_email import (DebugMfaRemovedEmailView)
 from sentry.web.frontend.debug.debug_new_release_email import (DebugNewReleaseEmailView)
@@ -22,6 +23,7 @@ from sentry.web.frontend.debug.debug_resolved_email import (DebugResolvedEmailVi
 from sentry.web.frontend.debug.debug_resolved_in_release_email import (
     DebugResolvedInReleaseEmailView, DebugResolvedInReleaseUpcomingEmailView
 )
+from sentry.web.frontend.debug.debug_unable_to_fetch_commits_email import DebugUnableToFetchCommitsEmailView
 from sentry.web.frontend.debug.debug_unassigned_email import (DebugUnassignedEmailView)
 from sentry.web.frontend.debug.debug_new_processing_issues_email import (
     DebugNewProcessingIssuesEmailView,
@@ -53,8 +55,10 @@ urlpatterns = patterns(
     url(r'^debug/mail/request-access/$', sentry.web.frontend.debug.mail.request_access),
     url(r'^debug/mail/access-approved/$', sentry.web.frontend.debug.mail.access_approved),
     url(r'^debug/mail/invitation/$', sentry.web.frontend.debug.mail.invitation),
+    url(r'^debug/mail/invalid-identity/$', DebugInvalidIdentityEmailView.as_view()),
     url(r'^debug/mail/confirm-email/$', sentry.web.frontend.debug.mail.confirm_email),
     url(r'^debug/mail/recover-account/$', sentry.web.frontend.debug.mail.recover_account),
+    url(r'^debug/mail/unable-to-fetch-commits/$', DebugUnableToFetchCommitsEmailView.as_view()),
     url(r'^debug/mail/unassigned/$', DebugUnassignedEmailView.as_view()),
     url(r'^debug/mail/org-delete-confirm/$', sentry.web.frontend.debug.mail.org_delete_confirm),
     url(r'^debug/mail/mfa-removed/$', DebugMfaRemovedEmailView.as_view()),

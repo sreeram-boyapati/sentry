@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React from 'react';
 import DocumentTitle from 'react-document-title';
 import {isEqual} from 'lodash';
@@ -7,6 +8,7 @@ import idx from 'idx';
 import ApiMixin from '../mixins/apiMixin';
 import AutoSelectText from '../components/autoSelectText';
 import DateTime from '../components/dateTime';
+import FlowLayout from '../components/flowLayout';
 import HookStore from '../stores/hookStore';
 import IndicatorStore from '../stores/indicatorStore';
 import LoadingError from '../components/loadingError';
@@ -22,6 +24,14 @@ import {
 } from '../components/forms';
 import {t, tct} from '../locale';
 
+// Exporting this only so we can quickly and simply unit test it
+// Not moving this to utils because this is tightly coupled to the UI
+export const getRateLimitError = (obj, key) => {
+  if (!obj || !obj.rateLimit || !Array.isArray(obj.rateLimit)) return null;
+
+  return !!obj.rateLimit.find(errorObj => errorObj[key] && errorObj[key].length);
+};
+
 const KeyStats = React.createClass({
   mixins: [ApiMixin],
 
@@ -30,8 +40,8 @@ const KeyStats = React.createClass({
     let since = until - 3600 * 24 * 30;
 
     return {
-      since: since,
-      until: until,
+      since,
+      until,
       loading: true,
       error: false,
       stats: null,
@@ -61,8 +71,8 @@ const KeyStats = React.createClass({
           };
         });
         this.setState({
-          stats: stats,
-          emptyStats: emptyStats,
+          stats,
+          emptyStats,
           error: false,
           loading: false
         });
@@ -126,14 +136,14 @@ const KeyStats = React.createClass({
 
 const KeySettings = React.createClass({
   propTypes: {
-    organization: React.PropTypes.object.isRequired,
-    project: React.PropTypes.object.isRequired,
-    access: React.PropTypes.object.isRequired,
-    data: React.PropTypes.object.isRequired,
-    initialData: React.PropTypes.object,
-    onRemove: React.PropTypes.func.isRequired,
-    onSave: React.PropTypes.func.isRequired,
-    rateLimitsEnabled: React.PropTypes.bool
+    organization: PropTypes.object.isRequired,
+    project: PropTypes.object.isRequired,
+    access: PropTypes.object.isRequired,
+    data: PropTypes.object.isRequired,
+    initialData: PropTypes.object,
+    onRemove: PropTypes.func.isRequired,
+    onSave: PropTypes.func.isRequired,
+    rateLimitsEnabled: PropTypes.bool
   },
 
   mixins: [ApiMixin],
@@ -233,15 +243,15 @@ const KeySettings = React.createClass({
   getRateLimitWindows() {
     return [
       ['', ''],
-      [1, '1 minute'],
-      [5, '5 minutes'],
-      [15, '15 minutes'],
-      [60, '1 hour'],
-      [120, '2 hours'],
-      [240, '4 hours'],
-      [360, '6 hours'],
-      [720, '12 hours'],
-      [1440, '24 hours']
+      [60, '1 minute'],
+      [300, '5 minutes'],
+      [900, '15 minutes'],
+      [3600, '1 hour'],
+      [7200, '2 hours'],
+      [14400, '4 hours'],
+      [21600, '6 hours'],
+      [43200, '12 hours'],
+      [86400, '24 hours']
     ];
   },
 
@@ -250,6 +260,9 @@ const KeySettings = React.createClass({
     let {errors, formData} = this.state;
     let hasChanges = !isEqual(this.props.initialData, formData);
     let {access, data, rateLimitsEnabled, organization, project} = this.props;
+    let rateLimitWindowError = getRateLimitError(errors, 'window');
+    let rateLimitCountError = getRateLimitError(errors, 'count');
+
     return (
       <form onSubmit={this.onSubmit} className="form-stacked">
         {this.state.state === FormState.ERROR &&
@@ -320,45 +333,48 @@ const KeySettings = React.createClass({
                     'Rate limits provide a flexible way to manage your event volume. If you have a noisy project or environment you can configure a rate limit for this key to reduce the number of events processed.'
                   }
                 </p>
-                <div className="form-group">
+                <div className="form-group rate-limit-group">
                   <label>{t('Rate Limit')}</label>
-                  <div>
-                    <div style={{width: 80, display: 'inline-block'}}>
+                  <FlowLayout truncate={false}>
+                    <div style={{width: 80}}>
                       <NumberField
+                        hideErrorMessage
                         key="rateLimit.count"
                         name="rateLimit.count"
                         min={0}
                         value={idx(formData, _ => _.rateLimit.count)}
                         required={false}
-                        error={errors.rateLimit}
+                        error={rateLimitCountError}
                         placeholder={t('count')}
                         onChange={this.onRateLimitChange.bind(this, 'count')}
                         className=""
                       />
                     </div>
-                    <div style={{display: 'inline-block', margin: '0 10px'}}>
+                    <div style={{margin: '0 10px'}}>
                       <small>event(s) in</small>
                     </div>
-                    <div style={{width: 150, display: 'inline-block'}}>
+                    <div style={{width: 150}}>
                       <Select2Field
                         width="100%"
+                        hideErrorMessage
                         key="rateLimit.window"
                         name="rateLimit.window"
                         choices={this.getRateLimitWindows()}
                         value={idx(formData, _ => _.rateLimit.window)}
                         required={false}
-                        error={errors.rateLimit}
+                        error={rateLimitWindowError}
                         placeholder={t('window')}
                         allowClear={true}
                         onChange={this.onRateLimitChange.bind(this, 'window')}
                         className=""
                       />
                     </div>
-                    <div className="help-block">
-                      {t(
-                        'Apply a rate limit to this credential to cap the amount of events accepted during a time window.'
-                      )}
-                    </div>
+                  </FlowLayout>
+
+                  <div className="help-block">
+                    {t(
+                      'Apply a rate limit to this credential to cap the amount of events accepted during a time window.'
+                    )}
                   </div>
                 </div>
                 <fieldset className="form-actions">
@@ -487,7 +503,7 @@ export default React.createClass({
         this.setState({
           error: false,
           loading: false,
-          data: data
+          data
         });
       },
       error: () => {

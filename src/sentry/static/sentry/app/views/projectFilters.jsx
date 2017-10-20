@@ -1,16 +1,21 @@
+import PropTypes from 'prop-types';
 import React from 'react';
 import _ from 'lodash';
+import ReactDOMServer from 'react-dom/server';
+import moment from 'moment';
 
 import ApiMixin from '../mixins/apiMixin';
 import IndicatorStore from '../stores/indicatorStore';
 import GroupTombstones from '../components/groupTombstones';
+import HookStore from '../stores/hookStore';
 import LoadingError from '../components/loadingError';
 import LoadingIndicator from '../components/loadingIndicator';
 import ProjectState from '../mixins/projectState';
 import StackedBarChart from '../components/stackedBarChart';
 import Switch from '../components/switch';
 import {FormState, TextareaField} from '../components/forms';
-import {t} from '../locale';
+import {t, tn} from '../locale';
+import {intcomma} from '../utils';
 import marked from '../utils/marked';
 
 const FilterSwitch = function(props) {
@@ -26,17 +31,17 @@ const FilterSwitch = function(props) {
 };
 
 FilterSwitch.propTypes = {
-  data: React.PropTypes.object.isRequired,
-  onToggle: React.PropTypes.func.isRequired,
-  size: React.PropTypes.string.isRequired
+  data: PropTypes.object.isRequired,
+  onToggle: PropTypes.func.isRequired,
+  size: PropTypes.string.isRequired
 };
 
 const FilterRow = React.createClass({
   propTypes: {
-    orgId: React.PropTypes.string.isRequired,
-    projectId: React.PropTypes.string.isRequired,
-    data: React.PropTypes.object.isRequired,
-    onToggle: React.PropTypes.func.isRequired
+    orgId: PropTypes.string.isRequired,
+    projectId: PropTypes.string.isRequired,
+    data: PropTypes.object.isRequired,
+    onToggle: PropTypes.func.isRequired
   },
 
   getInitialState() {
@@ -112,10 +117,10 @@ const LEGACY_BROWSER_KEYS = Object.keys(LEGACY_BROWSER_SUBFILTERS);
 
 const LegacyBrowserFilterRow = React.createClass({
   propTypes: {
-    orgId: React.PropTypes.string.isRequired,
-    projectId: React.PropTypes.string.isRequired,
-    data: React.PropTypes.object.isRequired,
-    onToggle: React.PropTypes.func.isRequired
+    orgId: PropTypes.string.isRequired,
+    projectId: PropTypes.string.isRequired,
+    data: PropTypes.object.isRequired,
+    onToggle: PropTypes.func.isRequired
   },
 
   getInitialState() {
@@ -180,7 +185,9 @@ const LegacyBrowserFilterRow = React.createClass({
     let rows = _.groupBy(entries, (entry, i) => Math.floor(i / 3));
 
     return _.toArray(rows).map((row, i) => (
-      <div className="row m-b-1" key={i}>{row}</div>
+      <div className="row m-b-1" key={i}>
+        {row}
+      </div>
     ));
   },
 
@@ -218,24 +225,33 @@ const LegacyBrowserFilterRow = React.createClass({
 
 const ProjectFiltersSettingsForm = React.createClass({
   propTypes: {
-    orgId: React.PropTypes.string.isRequired,
-    projectId: React.PropTypes.string.isRequired,
-    initialData: React.PropTypes.object.isRequired
+    orgId: PropTypes.string.isRequired,
+    projectId: PropTypes.string.isRequired,
+    initialData: PropTypes.object.isRequired
   },
 
-  mixins: [ApiMixin],
+  mixins: [ApiMixin, ProjectState],
 
   getInitialState() {
+    let features = this.getProjectFeatures();
     let formData = {};
-    for (let key of Object.keys(this.props.initialData)) {
-      if (key.lastIndexOf('filters:') === 0) {
+    Object.keys(this.props.initialData)
+      .filter(
+        key =>
+          // the project details endpoint can partially succeed and still return a 400
+          // if the org does not have the additional-data-filters feature enabled,
+          // so this prevents the form from sending an empty string by default
+          features.has('custom-inbound-filters') ||
+          (key !== 'filters:releases' && key !== 'filters:error_messages')
+      )
+      .forEach(key => {
         formData[key] = this.props.initialData[key];
-      }
-    }
+      });
     return {
       hasChanged: false,
-      formData: formData,
-      errors: {}
+      formData,
+      errors: {},
+      hooksDisabled: HookStore.get('project:custom-inbound-filters:disabled')
     };
   },
 
@@ -250,7 +266,6 @@ const ProjectFiltersSettingsForm = React.createClass({
 
   onSubmit(e) {
     e.preventDefault();
-
     if (this.state.state === FormState.SAVING) {
       return;
     }
@@ -285,9 +300,56 @@ const ProjectFiltersSettingsForm = React.createClass({
     );
   },
 
+  renderLinkToGlobWiki() {
+    return (
+      <span>
+        {t('Separate multiple entries with a newline. Allows ')}
+        <a href="https://en.wikipedia.org/wiki/Glob_(programming)">
+          {t('glob pattern matching.')}
+        </a>
+      </span>
+    );
+  },
+
+  renderAdditionalFilters() {
+    let errors = this.state.errors || {};
+    return (
+      <div>
+        <h5>{t('Filter errors from these releases:')}</h5>
+        <TextareaField
+          key="release"
+          name="release"
+          help={this.renderLinkToGlobWiki()}
+          placeholder="e.g. 1.* or [!3].[0-9].*"
+          value={this.state.formData['filters:releases']}
+          error={errors['filters:releases']}
+          onChange={this.onFieldChange.bind(this, 'filters:releases')}
+        />
+        <h5>{t('Filter errors by error message:')}</h5>
+        <TextareaField
+          key="errorMessage"
+          name="errorMessage"
+          help={this.renderLinkToGlobWiki()}
+          placeholder="e.g. TypeError* or *: integer division or modulo by zero"
+          value={this.state.formData['filters:error_messages']}
+          error={errors['filters:error_messages']}
+          onChange={this.onFieldChange.bind(this, 'filters:error_messages')}
+        />
+      </div>
+    );
+  },
+
+  renderDisabledFeature() {
+    let project = this.getProject();
+    let organization = this.getOrganization();
+    return this.state.hooksDisabled.map(hook => hook(organization, project));
+  },
+
   render() {
     let isSaving = this.state.state === FormState.SAVING;
-    let errors = this.state.errors;
+    let errors = this.state.errors || {};
+    let features = this.getProjectFeatures();
+
     return (
       <form onSubmit={this.onSubmit} className="form-stacked p-b-1">
         {this.state.state === FormState.ERROR &&
@@ -297,16 +359,6 @@ const ProjectFiltersSettingsForm = React.createClass({
             )}
           </div>}
         <fieldset>
-          <div className="pull-right">
-
-            <button
-              type="submit"
-              className="btn btn-sm btn-primary"
-              disabled={isSaving || !this.state.hasChanged}>
-              {t('Save Changes')}
-            </button>
-
-          </div>
           <h5>{t('Filter errors from these IP addresses:')}</h5>
           <TextareaField
             key="ip"
@@ -317,6 +369,17 @@ const ProjectFiltersSettingsForm = React.createClass({
             error={errors['filters:blacklisted_ips']}
             onChange={this.onFieldChange.bind(this, 'filters:blacklisted_ips')}
           />
+          {features.has('custom-inbound-filters')
+            ? this.renderAdditionalFilters()
+            : this.renderDisabledFeature()}
+          <div className="pull-right">
+            <button
+              type="submit"
+              className="btn btn-sm btn-primary"
+              disabled={isSaving || !this.state.hasChanged}>
+              {t('Save Changes')}
+            </button>
+          </div>
         </fieldset>
       </form>
     );
@@ -338,11 +401,10 @@ const ProjectFilters = React.createClass({
       filterList: [],
       querySince: since,
       queryUntil: until,
-      stats: null,
       rawStatsData: null,
-      processedStats: false,
+      formattedData: [],
       projectOptions: {},
-      blankStats: false,
+      blankStats: true,
       activeSection: 'data-filters',
       tombstones: [],
       tombstoneError: false
@@ -353,10 +415,85 @@ const ProjectFilters = React.createClass({
     this.fetchData();
   },
 
-  componentDidUpdate(prevProps) {
-    if (!this.state.loading && !this.state.stats) {
-      this.processStatsData();
-    }
+  getStatOpts() {
+    return {
+      'ip-address': 'IP Address',
+      'release-version': 'Release',
+      'error-message': 'Error Message',
+      'browser-extensions': 'Browser Extension',
+      'legacy-browsers': 'Legacy Browser',
+      localhost: 'Localhost',
+      'web-crawlers': 'Web Crawler',
+      'invalid-csp': 'Invalid CSP',
+      cors: 'CORS'
+    };
+  },
+
+  formatData(rawData) {
+    return Object.keys(this.getStatOpts()).map(stat => {
+      return {
+        data: rawData[stat].map(([x, y]) => {
+          if (y > 0) {
+            this.setState({blankStats: false});
+          }
+
+          return {x, y};
+        }),
+        label: this.getStatOpts()[stat],
+        statName: stat
+      };
+    });
+  },
+
+  getFilterStats() {
+    let statOptions = Object.keys(this.getStatOpts());
+    let {orgId, projectId} = this.props.params;
+    let statEndpoint = `/projects/${orgId}/${projectId}/stats/`;
+    let query = {
+      since: this.state.querySince,
+      until: this.state.queryUntil,
+      resolution: '1d'
+    };
+    $.when
+      .apply(
+        $,
+        // parallelize requests for each statistic
+        statOptions.map(stat => {
+          let deferred = $.Deferred();
+          this.api.request(statEndpoint, {
+            query: Object.assign({stat}, query),
+            success: deferred.resolve.bind(deferred),
+            error: deferred.reject.bind(deferred)
+          });
+          return deferred;
+        })
+      )
+      .done(
+        function(/* statOption1, statOption2, ... statOptionN */) {
+          let rawStatsData = {};
+          let expected = this.state.expected - 1;
+          // when there is a single request made, this is inexplicably called without being wrapped in an array
+          if (statOptions.length === 1) {
+            rawStatsData[statOptions[0]] = arguments[0];
+          } else {
+            for (let i = 0; i < statOptions.length; i++) {
+              rawStatsData[statOptions[i]] = arguments[i][0];
+            }
+          }
+
+          this.setState({
+            rawStatsData,
+            formattedData: this.formatData(rawStatsData),
+            expected,
+            loading: expected > 0
+          });
+        }.bind(this)
+      )
+      .fail(
+        function() {
+          this.setState({error: true});
+        }.bind(this)
+      );
   },
 
   fetchData() {
@@ -371,33 +508,13 @@ const ProjectFilters = React.createClass({
       complete: () => {
         let expected = this.state.expected - 1;
         this.setState({
-          expected: expected,
+          expected,
           loading: expected > 0
         });
       }
     });
 
-    this.api.request(`/projects/${orgId}/${projectId}/stats/`, {
-      query: {
-        since: this.state.querySince,
-        until: this.state.queryUntil,
-        resolution: '1d',
-        stat: 'blacklisted'
-      },
-      success: data => {
-        this.setState({rawStatsData: data});
-      },
-      error: () => {
-        this.setState({error: true});
-      },
-      complete: () => {
-        let expected = this.state.expected - 1;
-        this.setState({
-          expected: expected,
-          loading: expected > 0
-        });
-      }
-    });
+    this.getFilterStats();
 
     this.api.request(`/projects/${orgId}/${projectId}/`, {
       success: (data, textStatus, jqXHR) => {
@@ -409,7 +526,7 @@ const ProjectFilters = React.createClass({
       complete: () => {
         let expected = this.state.expected - 1;
         this.setState({
-          expected: expected,
+          expected,
           loading: expected > 0
         });
       }
@@ -428,24 +545,6 @@ const ProjectFilters = React.createClass({
     });
   },
 
-  processStatsData() {
-    let blank = true; // Keep track if the entire graph is blank or not.
-    let points = this.state.rawStatsData.map(point => {
-      let [x, y] = point;
-      if (y > 0) {
-        blank = false;
-      }
-      return {
-        x: x,
-        y: [y]
-      };
-    });
-    this.setState({
-      stats: points,
-      blankStats: blank
-    });
-  },
-
   onToggleFilter(filter, active) {
     if (this.state.loading) return;
 
@@ -456,13 +555,13 @@ const ProjectFilters = React.createClass({
 
     let data;
     if (typeof active === 'boolean') {
-      data = {active: active};
+      data = {active};
     } else {
       data = {subfilters: active};
     }
     this.api.request(endpoint, {
       method: 'PUT',
-      data: data,
+      data,
       success: (d, textStatus, jqXHR) => {
         let stateFilter = this.state.filterList.find(f => f.id === filter.id);
         stateFilter.active = active;
@@ -492,7 +591,7 @@ const ProjectFilters = React.createClass({
   renderBody() {
     let body;
 
-    if (this.state.loading || !this.state.stats) body = this.renderLoading();
+    if (this.state.loading || !this.state.formattedData) body = this.renderLoading();
     else if (this.state.error) body = <LoadingError onRetry={this.fetchData} />;
     else body = this.renderResults();
 
@@ -517,8 +616,8 @@ const ProjectFilters = React.createClass({
             let props = {
               key: filter.id,
               data: filter,
-              orgId: orgId,
-              projectId: projectId,
+              orgId,
+              projectId,
               onToggle: this.onToggleFilter
             };
             return filter.id === 'legacy-browsers'
@@ -548,6 +647,42 @@ const ProjectFilters = React.createClass({
     }
   },
 
+  timeLabelAsDay(point) {
+    let timeMoment = moment(point.x * 1000);
+
+    return timeMoment.format('LL');
+  },
+
+  renderTooltip(point, pointIdx, chart) {
+    let timeLabel = this.timeLabelAsDay(point);
+    let totalY = 0;
+    for (let i = 0; i < point.y.length; i++) {
+      totalY += point.y[i];
+    }
+    let {formattedData} = this.state;
+
+    return ReactDOMServer.renderToStaticMarkup(
+      <div style={{width: '175px'}}>
+        <div className="time-label"><span>{timeLabel}</span></div>
+        <div>{intcomma(totalY)} {tn('total event', 'total events', totalY)}</div>
+        {formattedData.map((dataPoint, i) => {
+          return (
+            point.y[i] > 0 &&
+            <dl className="legend" key={dataPoint.statName}>
+              <dt><span className={`${dataPoint.statName} 'filter-color'`} /></dt>
+              <dd style={{textAlign: 'left', position: 'absolute'}}>
+                {dataPoint.label}{' '}
+              </dd>
+              <dd style={{textAlign: 'right', position: 'relative'}}>
+                {point.y[i]} {tn('event', 'events', point.y[i])}
+              </dd>
+            </dl>
+          );
+        })}
+      </div>
+    );
+  },
+
   renderResults() {
     let navSection = this.state.activeSection;
     let features = this.getProjectFeatures();
@@ -560,15 +695,17 @@ const ProjectFilters = React.createClass({
           </div>
           {!this.state.blankStats
             ? <StackedBarChart
-                points={this.state.stats}
-                height={50}
+                series={this.state.formattedData}
                 label="events"
-                barClasses={['filtered']}
-                className="standard-barchart"
+                barClasses={Object.keys(this.getStatOpts())}
+                className="standard-barchart filtered-stats-barchart"
+                tooltip={this.renderTooltip}
               />
             : <div className="box-content">
                 <div className="blankslate p-y-2">
-                  <h5>{t('Nothing filtered in the last 30 days.')}</h5>
+                  <h5>
+                    {t('Nothing filtered in the last 30 days.')}
+                  </h5>
                   <p className="m-b-0">
                     {t(
                       'Issues filtered as a result of your settings below will be shown here.'
@@ -607,7 +744,9 @@ const ProjectFilters = React.createClass({
       <div>
         <h1>{t('Inbound Data Filters')}</h1>
         <p>
-          Filters allow you to prevent Sentry from storing events in certain situations. Filtered events are tracked separately from rate limits, and do not apply to any project quotas.
+          {t(
+            'Filters allow you to prevent Sentry from storing events in certain situations. Filtered events are tracked separately from rate limits, and do not apply to any project quotas.'
+          )}
         </p>
         {this.renderBody()}
       </div>

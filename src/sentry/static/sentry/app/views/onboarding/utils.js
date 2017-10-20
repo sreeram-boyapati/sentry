@@ -1,4 +1,5 @@
 // import {platforms} from '../../../../../integration-docs/_platforms.json';
+// eslint-disable-next-line import/extensions
 import {platforms} from 'integration-docs-platforms';
 
 const Popular = [
@@ -13,7 +14,12 @@ const Popular = [
   'php-symfony2',
   'java',
   'csharp',
-  'exilir'
+  'exilir',
+  'php',
+  'ruby',
+  'node',
+  'cocoa',
+  'javascript-angular'
 ];
 
 const Frontend = [
@@ -98,4 +104,15 @@ const stepDescriptions = {
   configure: 'Configure your application and send an event'
 };
 
-export {onboardingSteps, stepDescriptions, flattenedPlatforms, categoryLists};
+function getPlatformName(platform) {
+  let platformData = flattenedPlatforms.find(({id}) => platform == id);
+  return platformData && platformData.name;
+}
+
+export {
+  onboardingSteps,
+  stepDescriptions,
+  flattenedPlatforms,
+  categoryLists,
+  getPlatformName
+};

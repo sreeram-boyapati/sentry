@@ -1,6 +1,6 @@
 from __future__ import absolute_import, print_function
 
-from collections import defaultdict, namedtuple
+from collections import defaultdict
 from datetime import timedelta
 from itertools import izip
 
@@ -9,12 +9,12 @@ from django.core.urlresolvers import reverse
 from django.db.models import Q
 from django.utils import timezone
 
-from sentry import tsdb
+from sentry import tagstore, tsdb
 from sentry.api.serializers import Serializer, register, serialize
-from sentry.constants import LOG_LEVELS
+from sentry.constants import LOG_LEVELS, StatsPeriod
 from sentry.models import (
     Group, GroupAssignee, GroupBookmark, GroupMeta, GroupResolution, GroupSeen, GroupSnooze,
-    GroupStatus, GroupSubscription, GroupSubscriptionReason, GroupTagKey, User, UserOption,
+    GroupShare, GroupStatus, GroupSubscription, GroupSubscriptionReason, User, UserOption,
     UserOptionValue
 )
 from sentry.utils.db import attach_foreignkey
@@ -124,12 +124,7 @@ class GroupSerializer(Serializer):
             ).select_related('user')
         )
 
-        user_counts = dict(
-            GroupTagKey.objects.filter(
-                group__in=item_list,
-                key='sentry:user',
-            ).values_list('group', 'values_seen')
-        )
+        user_counts = tagstore.get_group_values_seen([g.id for g in item_list], 'sentry:user')
 
         ignore_items = {g.group_id: g for g in GroupSnooze.objects.filter(
             group__in=item_list,
@@ -156,6 +151,10 @@ class GroupSerializer(Serializer):
             actors = {u.id: d for u, d in izip(users, serialize(users, user))}
         else:
             actors = {}
+
+        share_ids = dict(GroupShare.objects.filter(
+            group__in=item_list,
+        ).values_list('group_id', 'uuid'))
 
         result = {}
         for item in item_list:
@@ -192,6 +191,7 @@ class GroupSerializer(Serializer):
                 'ignore_actor': ignore_actor,
                 'resolution': resolution,
                 'resolution_actor': resolution_actor,
+                'share_id': share_ids.get(item.id),
             }
         return result
 
@@ -255,10 +255,11 @@ class GroupSerializer(Serializer):
             permalink = None
 
         is_subscribed, subscription = attrs['subscription']
+        share_id = attrs['share_id']
 
         return {
             'id': six.text_type(obj.id),
-            'shareId': obj.get_share_id(),
+            'shareId': share_id,
             'shortId': obj.qualified_short_id,
             'count': six.text_type(obj.times_seen),
             'userCount': attrs['user_count'],
@@ -271,7 +272,7 @@ class GroupSerializer(Serializer):
             'level': LOG_LEVELS.get(obj.level, 'unknown'),
             'status': status_label,
             'statusDetails': status_details,
-            'isPublic': obj.is_public,
+            'isPublic': share_id is not None,
             'project': {
                 'name': obj.project.name,
                 'slug': obj.project.slug,
@@ -291,9 +292,6 @@ class GroupSerializer(Serializer):
             'hasSeen': attrs['has_seen'],
             'annotations': attrs['annotations'],
         }
-
-
-StatsPeriod = namedtuple('StatsPeriod', ('segments', 'interval'))
 
 
 class StreamGroupSerializer(GroupSerializer):

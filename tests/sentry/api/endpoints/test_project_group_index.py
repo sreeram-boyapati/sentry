@@ -9,10 +9,11 @@ from django.utils import timezone
 from exam import fixture
 from mock import patch
 
+from sentry import tagstore
 from sentry.models import (
     Activity, EventMapping, Group, GroupAssignee, GroupBookmark, GroupHash, GroupResolution,
-    GroupSeen, GroupSnooze, GroupStatus, GroupSubscription, GroupTagKey, GroupTagValue,
-    GroupTombstone, Release, UserOption
+    GroupSeen, GroupSnooze, GroupStatus, GroupSubscription,
+    GroupTombstone, Release, UserOption, GroupShare,
 )
 from sentry.models.event import Event
 from sentry.testutils import APITestCase
@@ -246,11 +247,11 @@ class GroupListTest(APITestCase):
         release.add_project(project2)
         group = self.create_group(checksum='a' * 32, project=project)
         group2 = self.create_group(checksum='b' * 32, project=project2)
-        GroupTagValue.objects.create(
+        tagstore.create_group_tag_value(
             project_id=project.id, group_id=group.id, key='sentry:release', value=release.version
         )
 
-        GroupTagValue.objects.create(
+        tagstore.create_group_tag_value(
             project_id=project2.id, group_id=group2.id, key='sentry:release', value=release.version
         )
 
@@ -361,6 +362,39 @@ class GroupUpdateTest(APITestCase):
             user=self.user,
             group=new_group4,
         )
+
+    def test_bulk_resolve(self):
+        self.login_as(user=self.user)
+
+        for i in range(200):
+            self.create_group(status=GroupStatus.UNRESOLVED)
+
+        response = self.client.get(
+            '{}?sort_by=date&query=is:unresolved'.format(self.path),
+            format='json',
+        )
+
+        assert len(response.data) == 100
+
+        response = self.client.put(
+            '{}?status=unresolved'.format(self.path),
+            data={
+                'status': 'resolved',
+            },
+            format='json',
+        )
+        assert response.status_code == 200, response.data
+
+        assert response.data == {
+            'status': 'resolved',
+            'statusDetails': {},
+        }
+        response = self.client.get(
+            '{}?sort_by=date&query=is:unresolved'.format(self.path),
+            format='json',
+        )
+
+        assert len(response.data) == 0
 
     def test_self_assign_issue(self):
         group = self.create_group(checksum='b' * 32, status=GroupStatus.UNRESOLVED)
@@ -886,9 +920,10 @@ class GroupUpdateTest(APITestCase):
             checksum='a' * 32,
             status=GroupStatus.RESOLVED,
         )
-        GroupTagKey.objects.create(
-            group=group,
-            key='sentry:user',
+        tagstore.create_group_tag_key(
+            group.project_id,
+            group.id,
+            'sentry:user',
             values_seen=100,
         )
 
@@ -1023,8 +1058,8 @@ class GroupUpdateTest(APITestCase):
         ).exists()
 
     def test_set_public(self):
-        group1 = self.create_group(checksum='a' * 32, is_public=False)
-        group2 = self.create_group(checksum='b' * 32, is_public=False)
+        group1 = self.create_group(checksum='a' * 32)
+        group2 = self.create_group(checksum='b' * 32)
 
         self.login_as(user=self.user)
         url = '{url}?id={group1.id}&id={group2.id}'.format(
@@ -1038,19 +1073,26 @@ class GroupUpdateTest(APITestCase):
             }, format='json'
         )
         assert response.status_code == 200
-        assert response.data == {
-            'isPublic': True,
-        }
+        assert response.data['isPublic'] is True
+        assert 'shareId' in response.data
 
         new_group1 = Group.objects.get(id=group1.id)
-        assert new_group1.is_public
+        assert bool(new_group1.get_share_id())
 
         new_group2 = Group.objects.get(id=group2.id)
-        assert new_group2.is_public
+        assert bool(new_group2.get_share_id())
 
     def test_set_private(self):
-        group1 = self.create_group(checksum='a' * 32, is_public=True)
-        group2 = self.create_group(checksum='b' * 32, is_public=True)
+        group1 = self.create_group(checksum='a' * 32)
+        group2 = self.create_group(checksum='b' * 32)
+
+        # Manually mark them as shared
+        for g in group1, group2:
+            GroupShare.objects.create(
+                project_id=g.project_id,
+                group=g,
+            )
+            assert bool(g.get_share_id())
 
         self.login_as(user=self.user)
         url = '{url}?id={group1.id}&id={group2.id}'.format(
@@ -1069,10 +1111,10 @@ class GroupUpdateTest(APITestCase):
         }
 
         new_group1 = Group.objects.get(id=group1.id)
-        assert not new_group1.is_public
+        assert not bool(new_group1.get_share_id())
 
         new_group2 = Group.objects.get(id=group2.id)
-        assert not new_group2.is_public
+        assert not bool(new_group2.get_share_id())
 
     def test_set_has_seen(self):
         group1 = self.create_group(checksum='a' * 32, status=GroupStatus.RESOLVED)

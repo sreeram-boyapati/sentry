@@ -1,9 +1,10 @@
+import _ from 'lodash';
 import Reflux from 'reflux';
+
 import GroupActions from '../actions/groupActions';
 import IndicatorStore from './indicatorStore';
 import PendingChangeQueue from '../utils/pendingChangeQueue';
 import {t} from '../locale';
-import _ from 'lodash';
 
 function showAlert(msg, type) {
   IndicatorStore.add(msg, type, {
@@ -285,6 +286,8 @@ const GroupStore = Reflux.createStore({
     itemIds.forEach(itemId => {
       this.addStatus(itemId, 'merge');
     });
+    // XXX(billy): Not sure if this is a bug or not but do we need to publish all itemIds?
+    // Seems like we only need to publish parent id
     this.trigger(new Set(itemIds));
   },
 

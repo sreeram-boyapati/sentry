@@ -1,6 +1,9 @@
 from __future__ import absolute_import
 
-from libsourcemap import ProguardView
+import six
+import uuid
+
+from symbolic import ProguardMappingView
 from sentry.plugins import Plugin2
 from sentry.stacktraces import StacktraceProcessor
 from sentry.models import ProjectDSymFile, EventError
@@ -19,7 +22,7 @@ class JavaStacktraceProcessor(StacktraceProcessor):
             self.debug_meta = debug_meta
             for img in debug_meta['images']:
                 if img['type'] == 'proguard':
-                    self.images.add(img['uuid'])
+                    self.images.add(uuid.UUID(img['uuid']))
         else:
             self.available = False
 
@@ -32,7 +35,7 @@ class JavaStacktraceProcessor(StacktraceProcessor):
             (
                 FRAME_CACHE_VERSION, processable_frame.frame['module'],
                 processable_frame.frame['function'],
-            ) + tuple(sorted(self.images))
+            ) + tuple(sorted(map(six.text_type, self.images)))
         )
 
     def preprocess_step(self, processing_task):
@@ -49,7 +52,7 @@ class JavaStacktraceProcessor(StacktraceProcessor):
             if dsym_path is None:
                 error_type = EventError.PROGUARD_MISSING_MAPPING
             else:
-                view = ProguardView.from_path(dsym_path)
+                view = ProguardMappingView.from_path(dsym_path)
                 if not view.has_line_info:
                     error_type = EventError.PROGUARD_MISSING_LINENO
                 else:

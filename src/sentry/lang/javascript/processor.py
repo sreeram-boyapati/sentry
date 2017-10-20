@@ -11,8 +11,8 @@ import zlib
 from django.conf import settings
 from os.path import splitext
 from requests.utils import get_encoding_from_headers
-from six.moves.urllib.parse import urlparse, urljoin, urlsplit
-from libsourcemap import from_json as view_from_json
+from six.moves.urllib.parse import urljoin, urlsplit
+from symbolic import SourceMapView
 
 # In case SSL is unavailable (light builds) we can't import this here.
 try:
@@ -197,28 +197,18 @@ def discover_sourcemap(result):
 def fetch_release_file(filename, release, dist=None):
     cache_key = 'releasefile:v1:%s:%s' % (release.id, md5_text(filename).hexdigest(), )
 
-    filename_path = None
-    if filename is not None:
-        # Reconstruct url without protocol + host
-        # e.g. http://example.com/foo?bar => ~/foo?bar
-        parsed_url = urlparse(filename)
-        filename_path = '~' + parsed_url.path
-        if parsed_url.query:
-            filename_path += '?' + parsed_url.query
-
     logger.debug('Checking cache for release artifact %r (release_id=%s)', filename, release.id)
     result = cache.get(cache_key)
 
     dist_name = dist and dist.name or None
 
     if result is None:
+        filename_choices = ReleaseFile.normalize(filename)
+        filename_idents = [ReleaseFile.get_ident(f, dist_name) for f in filename_choices]
+
         logger.debug(
             'Checking database for release artifact %r (release_id=%s)', filename, release.id
         )
-
-        filename_idents = [ReleaseFile.get_ident(filename, dist_name)]
-        if filename_path is not None and filename_path != filename:
-            filename_idents.append(ReleaseFile.get_ident(filename_path, dist_name))
 
         possible_files = list(
             ReleaseFile.objects.filter(
@@ -237,10 +227,15 @@ def fetch_release_file(filename, release, dist=None):
         elif len(possible_files) == 1:
             releasefile = possible_files[0]
         else:
-            # Prioritize releasefile that matches full url (w/ host)
-            # over hostless releasefile
-            target_ident = filename_idents[0]
-            releasefile = next((f for f in possible_files if f.ident == target_ident))
+            # Pick first one that matches in priority order.
+            # This is O(N*M) but there are only ever at most 4 things here
+            # so not really worth optimizing.
+            releasefile = next((
+                rf
+                for ident in filename_idents
+                for rf in possible_files
+                if rf.ident == ident
+            ))
 
         logger.debug(
             'Found release artifact %r (id=%s, release_id=%s)', filename, releasefile.id, release.id
@@ -396,7 +391,7 @@ def fetch_sourcemap(url, project=None, release=None, dist=None, allow_scraping=T
         )
         body = result.body
     try:
-        return view_from_json(body)
+        return SourceMapView.from_json_bytes(body)
     except Exception as exc:
         # This is in debug because the product shows an error already.
         logger.debug(six.text_type(exc), exc_info=True)
@@ -505,9 +500,15 @@ class JavaScriptStacktraceProcessor(StacktraceProcessor):
         platform = frame.get('platform') or self.data.get('platform')
         return (settings.SENTRY_SCRAPE_JAVASCRIPT_CONTEXT and platform == 'javascript')
 
+    def preprocess_frame(self, processable_frame):
+        # Stores the resolved token.  This is used to cross refer to other
+        # frames for function name resolution by call site.
+        processable_frame.data = {
+            'token': None,
+        }
+
     def process_frame(self, processable_frame, processing_task):
         frame = processable_frame.frame
-        last_token = None
         token = None
 
         cache = self.cache
@@ -515,8 +516,8 @@ class JavaScriptStacktraceProcessor(StacktraceProcessor):
         all_errors = []
         sourcemap_applied = False
 
-        # can't fetch source if there's no filename present
-        if not frame.get('abs_path'):
+        # can't fetch source if there's no filename present or no line
+        if not frame.get('abs_path') or not frame.get('lineno'):
             return
 
         errors = cache.get_errors(frame['abs_path'])
@@ -525,7 +526,7 @@ class JavaScriptStacktraceProcessor(StacktraceProcessor):
 
         # This might fail but that's okay, we try with a different path a
         # bit later down the road.
-        source = self.get_source(frame['abs_path'])
+        source = self.get_sourceview(frame['abs_path'])
 
         in_app = None
         new_frame = dict(frame)
@@ -541,8 +542,6 @@ class JavaScriptStacktraceProcessor(StacktraceProcessor):
                 }
             )
         elif sourcemap_view:
-            last_token = token
-
             if is_data_uri(sourcemap_url):
                 sourcemap_label = frame['abs_path']
             else:
@@ -550,11 +549,20 @@ class JavaScriptStacktraceProcessor(StacktraceProcessor):
 
             sourcemap_label = http.expose_url(sourcemap_label)
 
+            if frame.get('function'):
+                minified_function_name = frame['function']
+                minified_source = self.get_sourceview(frame['abs_path'])
+            else:
+                minified_function_name = minified_source = None
+
             try:
                 # Errors are 1-indexed in the frames, so we need to -1 to get
                 # zero-indexed value from tokens.
                 assert frame['lineno'] > 0, "line numbers are 1-indexed"
-                token = sourcemap_view.lookup_token(frame['lineno'] - 1, frame['colno'])
+                token = sourcemap_view.lookup(frame['lineno'] - 1,
+                                              frame['colno'] - 1,
+                                              minified_function_name,
+                                              minified_source)
             except Exception:
                 token = None
                 all_errors.append(
@@ -567,6 +575,9 @@ class JavaScriptStacktraceProcessor(StacktraceProcessor):
                     }
                 )
 
+            # persist the token so that we can find it later
+            processable_frame.data['token'] = token
+
             # Store original data in annotation
             new_frame['data'] = dict(frame.get('data') or {}, sourcemap=sourcemap_label)
 
@@ -578,7 +589,7 @@ class JavaScriptStacktraceProcessor(StacktraceProcessor):
                 logger.debug(
                     'Mapping compressed source %r to mapping in %r', frame['abs_path'], abs_path
                 )
-                source = self.get_source(abs_path)
+                source = self.get_sourceview(abs_path)
 
             if not source:
                 errors = cache.get_errors(abs_path)
@@ -593,15 +604,29 @@ class JavaScriptStacktraceProcessor(StacktraceProcessor):
                     )
 
             if token is not None:
-                # Token's return zero-indexed lineno's
+                # the tokens are zero indexed, so offset correctly
                 new_frame['lineno'] = token.src_line + 1
-                new_frame['colno'] = token.src_col
-                # The offending function is always the previous function in the stack
-                # Honestly, no idea what the bottom most frame is, so we're ignoring that atm
-                if last_token:
-                    new_frame['function'] = last_token.name or frame.get('function')
-                else:
-                    new_frame['function'] = token.name or frame.get('function')
+                new_frame['colno'] = token.src_col + 1
+
+                # Try to use the function name we got from symbolic
+                original_function_name = token.function_name
+
+                # In the ideal case we can use the function name from the
+                # frame and the location to resolve the original name
+                # through the heuristics in our sourcemap library.
+                if original_function_name is None:
+                    last_token = None
+
+                    # Find the previous token for function name handling as a
+                    # fallback.
+                    if processable_frame.previous_frame and \
+                       processable_frame.previous_frame.processor is self:
+                        last_token = processable_frame.previous_frame.data.get('token')
+                        if last_token:
+                            original_function_name = last_token.name
+
+                if original_function_name is not None:
+                    new_frame['function'] = original_function_name
 
                 filename = token.src
                 # special case webpack support
@@ -650,14 +675,16 @@ class JavaScriptStacktraceProcessor(StacktraceProcessor):
         # another mapped, minified source
         changed_frame = self.expand_frame(new_frame, source=source)
 
-        if not new_frame.get('context_line') and source:
+        # If we did not manage to match but we do have a line or column
+        # we want to report an error here.
+        if not new_frame.get('context_line') \
+           and source and \
+           new_frame.get('colno') is not None:
             all_errors.append(
                 {
                     'type': EventError.JS_INVALID_SOURCEMAP_LOCATION,
-                    # Column might be missing here
-                    'column': new_frame.get('colno'),
-                    # Line might be missing here
-                    'row': new_frame.get('lineno'),
+                    'column': new_frame['colno'],
+                    'row': new_frame['lineno'],
                     'source': new_frame['abs_path'],
                 }
             )
@@ -673,7 +700,7 @@ class JavaScriptStacktraceProcessor(StacktraceProcessor):
     def expand_frame(self, frame, source=None):
         if frame.get('lineno') is not None:
             if source is None:
-                source = self.get_source(frame['abs_path'])
+                source = self.get_sourceview(frame['abs_path'])
                 if source is None:
                     logger.debug('No source found for %s', frame['abs_path'])
                     return False
@@ -684,7 +711,7 @@ class JavaScriptStacktraceProcessor(StacktraceProcessor):
             return True
         return False
 
-    def get_source(self, filename):
+    def get_sourceview(self, filename):
         if filename not in self.cache:
             self.cache_source(filename)
         return self.cache.get(filename)
@@ -743,12 +770,12 @@ class JavaScriptStacktraceProcessor(StacktraceProcessor):
         sourcemaps.add(sourcemap_url, sourcemap_view)
 
         # cache any inlined sources
-        for src_id, source in sourcemap_view.iter_sources():
-            if sourcemap_view.has_source_contents(src_id):
+        for src_id, source_name in sourcemap_view.iter_sources():
+            source_view = sourcemap_view.get_sourceview(src_id)
+            if source_view is not None:
                 self.cache.add(
-                    urljoin(sourcemap_url, source),
-                    lambda view=sourcemap_view, id=src_id: view.get_source_contents(id),
-                    None,
+                    urljoin(sourcemap_url, source_name),
+                    source_view
                 )
 
     def populate_source_cache(self, frames):

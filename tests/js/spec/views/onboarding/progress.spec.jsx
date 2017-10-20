@@ -1,6 +1,5 @@
 import React from 'react';
 import {shallow} from 'enzyme';
-import toJson from 'enzyme-to-json';
 
 import ProgressNodes from 'app/views/onboarding/progress';
 
@@ -12,8 +11,14 @@ describe('ProgressNodes', function() {
       }
     };
 
+    const baseContext = {
+      context: {
+        organization: {id: '1337', slug: 'testOrg'}
+      }
+    };
+
     it('should render step 0 if no projectId', function() {
-      let wrapper = shallow(<ProgressNodes {...baseProps} />);
+      let wrapper = shallow(<ProgressNodes {...baseProps} />, baseContext);
 
       expect(wrapper.find('.node')).toHaveLength(6);
       expect(wrapper.find('.active')).toHaveLength(2);
@@ -23,7 +28,7 @@ describe('ProgressNodes', function() {
 
       expect(wrapper.find('.done')).toHaveLength(2);
 
-      expect(toJson(wrapper)).toMatchSnapshot();
+      expect(wrapper).toMatchSnapshot();
     });
 
     it('should render step 1 if has projectId', function() {
@@ -34,7 +39,7 @@ describe('ProgressNodes', function() {
         }
       };
 
-      let wrapper = shallow(<ProgressNodes {...props} />);
+      let wrapper = shallow(<ProgressNodes {...props} />, baseContext);
 
       expect(wrapper.find('.node')).toHaveLength(6);
       expect(wrapper.find('.active')).toHaveLength(2);
@@ -44,7 +49,7 @@ describe('ProgressNodes', function() {
 
       expect(wrapper.find('.done')).toHaveLength(4);
 
-      expect(toJson(wrapper)).toMatchSnapshot();
+      expect(wrapper).toMatchSnapshot();
     });
   });
 });

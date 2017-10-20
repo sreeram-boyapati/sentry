@@ -194,13 +194,13 @@ class Fixtures(object):
 
     @fixture
     def group(self):
-        return self.create_group(message=u'こんにちは')
+        return self.create_group(message=u'\u3053\u3093\u306b\u3061\u306f')
 
     @fixture
     def event(self):
         return self.create_event(
             event_id='a' * 32,
-            message=u'こんにちは',
+            message=u'\u3053\u3093\u306b\u3061\u306f',
         )
 
     @fixture
@@ -259,7 +259,9 @@ class Fixtures(object):
         if not kwargs.get('organization'):
             kwargs['organization'] = kwargs['team'].organization
 
-        return Project.objects.create(**kwargs)
+        project = Project.objects.create(**kwargs)
+        project.add_team(kwargs['team'])
+        return project
 
     def create_project_key(self, project):
         return project.key_set.get_or_create()[0]
@@ -369,6 +371,17 @@ class Fixtures(object):
         ).update(is_verified=True)
 
         return user
+
+    def create_useremail(self, user, email, **kwargs):
+        if not email:
+            email = uuid4().hex + '@example.com'
+
+        kwargs.setdefault('is_verified', True)
+
+        useremail = UserEmail(user=user, email=email, **kwargs)
+        useremail.save()
+
+        return useremail
 
     def create_event(self, event_id=None, **kwargs):
         if event_id is None:
@@ -506,7 +519,8 @@ class Fixtures(object):
                 }
             }"""
 
-        return self.create_event(event_id=event_id, platform='javascript', data=json.loads(payload))
+        return self.create_event(event_id=event_id, platform='javascript',
+                                 data=json.loads(payload))
 
     def create_group(self, project=None, checksum=None, **kwargs):
         if checksum:

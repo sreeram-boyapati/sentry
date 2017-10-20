@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React from 'react';
 import ListLink from '../listLink';
 import OrganizationState from '../../mixins/organizationState';
@@ -6,7 +7,7 @@ import {t} from '../../locale';
 
 const HomeSidebar = React.createClass({
   contextTypes: {
-    location: React.PropTypes.object
+    location: PropTypes.object
   },
 
   mixins: [OrganizationState],
@@ -20,7 +21,7 @@ const HomeSidebar = React.createClass({
     });
 
     return {
-      hooks: hooks
+      hooks
     };
   },
 
@@ -87,11 +88,13 @@ const HomeSidebar = React.createClass({
               {features.has('sso') &&
                 access.has('org:admin') &&
                 <li><a href={`/organizations/${orgId}/auth/`}>{t('Auth')}</a></li>}
+
               {access.has('org:admin') &&
                 features.has('api-keys') &&
-                <li>
-                  <a href={`/organizations/${orgId}/api-keys/`}>{t('API Keys')}</a>
-                </li>}
+                <ListLink to={`/organizations/${orgId}/api-keys/`}>
+                  {t('API Keys')}
+                </ListLink>}
+
               {access.has('org:write') &&
                 <ListLink to={`/organizations/${orgId}/audit-log/`}>
                   {t('Audit Log')}
@@ -99,6 +102,11 @@ const HomeSidebar = React.createClass({
               {access.has('org:write') &&
                 <ListLink to={`/organizations/${orgId}/rate-limits/`}>
                   {t('Rate Limits')}
+                </ListLink>}
+              {features.has('integrations-v3') &&
+                access.has('org:integrations') &&
+                <ListLink to={`/organizations/${orgId}/integrations/`}>
+                  {t('Integrations')}
                 </ListLink>}
               {access.has('org:write') &&
                 <ListLink to={`/organizations/${orgId}/repos/`}>

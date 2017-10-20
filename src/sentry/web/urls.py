@@ -27,23 +27,23 @@ from sentry.web.frontend.auth_provider_login import AuthProviderLoginView
 from sentry.web.frontend.auth_close import AuthCloseView
 from sentry.web.frontend.create_organization_member import \
     CreateOrganizationMemberView
-from sentry.web.frontend.create_project import CreateProjectView
 from sentry.web.frontend.error_page_embed import ErrorPageEmbedView
 from sentry.web.frontend.group_event_json import GroupEventJsonView
 from sentry.web.frontend.group_plugin_action import GroupPluginActionView
 from sentry.web.frontend.group_tag_export import GroupTagExportView
 from sentry.web.frontend.home import HomeView
+from sentry.web.frontend.integration_setup import IntegrationSetupView
 from sentry.web.frontend.mailgun_inbound_webhook import \
     MailgunInboundWebhookView
 from sentry.web.frontend.oauth_authorize import OAuthAuthorizeView
 from sentry.web.frontend.oauth_token import OAuthTokenView
-from sentry.web.frontend.organization_api_key_settings import \
-    OrganizationApiKeySettingsView
-from sentry.web.frontend.organization_api_keys import OrganizationApiKeysView
+from sentry.auth.providers.saml2 import SAML2AcceptACSView, SAML2SLSView, SAML2MetadataView
 from sentry.web.frontend.organization_auth_settings import \
     OrganizationAuthSettingsView
 from sentry.web.frontend.organization_member_settings import \
     OrganizationMemberSettingsView
+from sentry.web.frontend.organization_integration_setup import \
+    OrganizationIntegrationSetupView
 from sentry.web.frontend.out import OutView
 from sentry.web.frontend.organization_members import OrganizationMembersView
 from sentry.web.frontend.project_issue_tracking import ProjectIssueTrackingView
@@ -63,6 +63,8 @@ from sentry.web.frontend.remove_account import RemoveAccountView
 from sentry.web.frontend.remove_organization import RemoveOrganizationView
 from sentry.web.frontend.restore_organization import RestoreOrganizationView
 from sentry.web.frontend.remove_project import RemoveProjectView
+from sentry.web.frontend.transfer_project import TransferProjectView
+from sentry.web.frontend.accept_project_transfer import AcceptProjectTransferView
 from sentry.web.frontend.remove_team import RemoveTeamView
 from sentry.web.frontend.sudo import SudoView
 from sentry.web.frontend.unsubscribe_issue_notifications import \
@@ -137,6 +139,14 @@ urlpatterns += patterns(
     # OAuth
     url(r'^oauth/authorize/$', OAuthAuthorizeView.as_view()),
     url(r'^oauth/token/$', OAuthTokenView.as_view()),
+
+    # SAML
+    url(r'^saml/acs/(?P<organization_slug>[^/]+)/$', SAML2AcceptACSView.as_view(),
+        name='sentry-auth-organization-saml-acs'),
+    url(r'^saml/sls/(?P<organization_slug>[^/]+)/$', SAML2SLSView.as_view(),
+        name='sentry-auth-organization-saml-sls'),
+    url(r'^saml/metadata/(?P<organization_slug>[^/]+)/$', SAML2MetadataView.as_view(),
+        name='sentry-auth-organization-saml-metadata'),
 
     # Auth
     url(
@@ -296,23 +306,30 @@ urlpatterns += patterns(
     url(r'^api/[^0]+/', generic_react_page_view),
     url(r'^out/$', OutView.as_view()),
 
+    url(r'^accept-transfer/$', AcceptProjectTransferView.as_view(),
+        name='sentry-accept-project-transfer'),
+
     # Organizations
     url(r'^(?P<organization_slug>[\w_-]+)/$', react_page_view, name='sentry-organization-home'),
     url(r'^organizations/new/$', generic_react_page_view),
     url(
         r'^organizations/(?P<organization_slug>[\w_-]+)/api-keys/$',
-        OrganizationApiKeysView.as_view(),
+        react_page_view,
         name='sentry-organization-api-keys'
     ),
     url(
         r'^organizations/(?P<organization_slug>[\w_-]+)/api-keys/(?P<key_id>[\w_-]+)/$',
-        OrganizationApiKeySettingsView.as_view(),
+        react_page_view,
         name='sentry-organization-api-key-settings'
     ),
     url(
         r'^organizations/(?P<organization_slug>[\w_-]+)/auth/$',
         OrganizationAuthSettingsView.as_view(),
         name='sentry-organization-auth-settings'
+    ),
+    url(
+        r'^organizations/(?P<organization_slug>[\w_-]+)/integrations/(?P<provider_id>[\w_-]+)/setup/$',
+        OrganizationIntegrationSetupView.as_view()
     ),
     url(
         r'^organizations/(?P<organization_slug>[\w_-]+)/members/$',
@@ -340,11 +357,6 @@ urlpatterns += patterns(
         name='sentry-remove-team'
     ),
     url(r'^organizations/(?P<organization_slug>[\w_-]+)/teams/new/$', react_page_view),
-    url(
-        r'^organizations/(?P<organization_slug>[\w_-]+)/projects/new/$',
-        CreateProjectView.as_view(),
-        name='sentry-create-project'
-    ),
     url(
         r'^organizations/(?P<organization_slug>[\w_-]+)/remove/$',
         RemoveOrganizationView.as_view(),
@@ -406,6 +418,11 @@ urlpatterns += patterns(
         name='sentry-remove-project'
     ),
     url(
+        r'^(?P<organization_slug>[\w_-]+)/(?P<project_slug>[\w_-]+)/settings/transfer/$',
+        TransferProjectView.as_view(),
+        name='sentry-transfer-project'
+    ),
+    url(
         r'^(?P<organization_slug>[\w_-]+)/(?P<project_slug>[\w_-]+)/settings/tags/$',
         ProjectTagsView.as_view(),
         name='sentry-manage-project-tags'
@@ -430,6 +447,8 @@ urlpatterns += patterns(
     url(r'^$', HomeView.as_view(), name='sentry'),
     url(r'^robots\.txt$', api.robots_txt, name='sentry-api-robots-txt'),
 
+
+
     # Force a 404 of favicon.ico.
     # This url is commonly requested by browsers, and without
     # blocking this, it was treated as a 200 OK for a react page view.
@@ -442,6 +461,13 @@ urlpatterns += patterns(
     url(r'^crossdomain\.xml$', api.crossdomain_xml_index, name='sentry-api-crossdomain-xml-index'),
 
     # plugins
+    # XXX(dcramer): preferably we'd be able to use 'integrations' as the URL
+    # prefix here, but unfortunately sentry.io has that mapped to marketing
+    # assets for the time being
+    url(r'^extensions/(?P<provider_id>[\w_-]+)/setup/$', IntegrationSetupView.as_view()),
+    url(r'^extensions/cloudflare/', include('sentry.integrations.cloudflare.urls')),
+    url(r'^extensions/slack/', include('sentry.integrations.slack.urls')),
+
     url(r'^plugins/', include('sentry.plugins.base.urls')),
 
     # Generic API

@@ -1,25 +1,27 @@
 from __future__ import absolute_import
 
+import six
 from hashlib import sha1
 from mock import patch
 from uuid import uuid4
 
+from sentry import tagstore
 from sentry.models import (
-    Commit, CommitAuthor, GroupAssignee, GroupCommitResolution, OrganizationMember, Release,
-    Repository, TagValue, UserEmail
+    Activity, Commit, CommitAuthor, GroupAssignee, GroupCommitResolution, OrganizationMember,
+    Release, Repository, UserEmail
 )
 from sentry.testutils import TestCase
 
 
 class EnsureReleaseExistsTest(TestCase):
     def test_simple(self):
-        tv = TagValue.objects.create(
-            project=self.project,
+        tv = tagstore.create_tag_value(
+            project_id=self.project.id,
             key='sentry:release',
             value='1.0',
         )
 
-        tv = TagValue.objects.get(id=tv.id)
+        tv = tagstore.get_tag_value(self.project.id, 'sentry:release', '1.0')
         assert tv.data['release_id']
 
         release = Release.objects.get(id=tv.data['release_id'])
@@ -77,7 +79,8 @@ class ResolvedInCommitTest(TestCase):
             key=sha1(uuid4().hex).hexdigest(),
             repository_id=repo.id,
             organization_id=self.organization.id,
-            message='Foo Biz\n\nFixes {}-12F'.format(self.project.slug.upper()),
+            message='Foo Biz\n\nFixes {}-12F'.format(
+                self.project.slug.upper()),
         )
 
         assert not GroupCommitResolution.objects.filter(
@@ -111,7 +114,8 @@ class ResolvedInCommitTest(TestCase):
 
     def test_assigns_author(self):
         group = self.create_group()
-        user = self.create_user(name='Foo Bar', email='foo@example.com', is_active=True)
+        user = self.create_user(
+            name='Foo Bar', email='foo@example.com', is_active=True)
         email = UserEmail.get_primary_email(user=user)
         email.is_verified = True
         email.save()
@@ -119,7 +123,8 @@ class ResolvedInCommitTest(TestCase):
             name='example',
             organization_id=self.group.organization.id,
         )
-        OrganizationMember.objects.create(organization=group.project.organization, user=user)
+        OrganizationMember.objects.create(
+            organization=group.project.organization, user=user)
         commit = Commit.objects.create(
             key=sha1(uuid4().hex).hexdigest(),
             organization_id=group.organization.id,
@@ -138,3 +143,8 @@ class ResolvedInCommitTest(TestCase):
         ).exists()
 
         assert GroupAssignee.objects.filter(group=group, user=user).exists()
+
+        self.assertEqual(Activity.objects.filter(project=group.project,
+                                                 group=group,
+                                                 type=Activity.ASSIGNED,
+                                                 user=user,)[0].data, {'assignee': six.text_type(user.id), 'assigneeEmail': user.email})

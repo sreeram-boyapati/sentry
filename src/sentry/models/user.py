@@ -182,9 +182,9 @@ class User(BaseModel, AbstractBaseUser):
         # TODO: we could discover relations automatically and make this useful
         from sentry import roles
         from sentry.models import (
-            AuditLogEntry, Activity, AuthIdentity, GroupAssignee, GroupBookmark, GroupSeen,
-            GroupSubscription, OrganizationMember, OrganizationMemberTeam, UserAvatar, UserEmail,
-            UserOption
+            Activity, AuditLogEntry, AuthIdentity, Authenticator, GroupAssignee, GroupBookmark, GroupSeen,
+            GroupShare, GroupSubscription, OrganizationMember, OrganizationMemberTeam, UserAvatar,
+            UserEmail, UserOption,
         )
 
         audit_logger.info(
@@ -220,8 +220,8 @@ class User(BaseModel, AbstractBaseUser):
                     pass
 
         model_list = (
-            GroupAssignee, GroupBookmark, GroupSeen, GroupSubscription, UserAvatar, UserEmail,
-            UserOption
+            Authenticator, GroupAssignee, GroupBookmark, GroupSeen, GroupShare,
+            GroupSubscription, UserAvatar, UserEmail, UserOption,
         )
 
         for model in model_list:

@@ -35,6 +35,8 @@ from .endpoints.legacy_project_redirect import LegacyProjectRedirectEndpoint
 from .endpoints.organization_access_request_details import OrganizationAccessRequestDetailsEndpoint
 from .endpoints.organization_activity import OrganizationActivityEndpoint
 from .endpoints.organization_auditlogs import OrganizationAuditLogsEndpoint
+from .endpoints.organization_api_key_index import OrganizationApiKeyIndexEndpoint
+from .endpoints.organization_api_key_details import OrganizationApiKeyDetailsEndpoint
 from .endpoints.organization_details import OrganizationDetailsEndpoint
 from .endpoints.organization_shortid import ShortIdLookupEndpoint
 from .endpoints.organization_slugs import SlugsUpdateEndpoint
@@ -54,6 +56,9 @@ from .endpoints.organization_release_files import OrganizationReleaseFilesEndpoi
 from .endpoints.organization_release_file_details import OrganizationReleaseFileDetailsEndpoint
 from .endpoints.organization_release_commits import OrganizationReleaseCommitsEndpoint
 from .endpoints.organization_repositories import OrganizationRepositoriesEndpoint
+from .endpoints.organization_integration_details import OrganizationIntegrationDetailsEndpoint
+from .endpoints.organization_integrations import OrganizationIntegrationsEndpoint
+from .endpoints.organization_config_integrations import OrganizationConfigIntegrationsEndpoint
 from .endpoints.organization_config_repositories import OrganizationConfigRepositoriesEndpoint
 from .endpoints.organization_repository_commits import OrganizationRepositoryCommitsEndpoint
 from .endpoints.organization_repository_details import OrganizationRepositoryDetailsEndpoint
@@ -62,6 +67,7 @@ from .endpoints.organization_teams import OrganizationTeamsEndpoint
 from .endpoints.organization_user_issues import OrganizationUserIssuesEndpoint
 from .endpoints.organization_user_issues_search import OrganizationUserIssuesSearchEndpoint
 from .endpoints.project_details import ProjectDetailsEndpoint
+from .endpoints.project_create_sample import ProjectCreateSampleEndpoint
 from .endpoints.project_docs import ProjectDocsEndpoint
 from .endpoints.project_docs_platform import ProjectDocsPlatformEndpoint
 from .endpoints.project_environments import ProjectEnvironmentsEndpoint
@@ -90,7 +96,7 @@ from .endpoints.project_tags import ProjectTagsEndpoint
 from .endpoints.project_tagkey_details import ProjectTagKeyDetailsEndpoint
 from .endpoints.project_tagkey_values import ProjectTagKeyValuesEndpoint
 from .endpoints.project_processingissues import ProjectProcessingIssuesEndpoint, \
-    ProjectProcessingIssuesFixEndpoint
+    ProjectProcessingIssuesFixEndpoint, ProjectProcessingIssuesDiscardEndpoint
 from .endpoints.project_reprocessing import ProjectReprocessingEndpoint
 from .endpoints.project_user_details import ProjectUserDetailsEndpoint
 from .endpoints.project_user_reports import ProjectUserReportsEndpoint
@@ -207,9 +213,24 @@ urlpatterns = patterns(
         name='sentry-api-0-organization-activity'
     ),
     url(
+        r'^organizations/(?P<organization_slug>[^\/]+)/api-keys/$',
+        OrganizationApiKeyIndexEndpoint.as_view(),
+        name='sentry-api-0-organization-api-key-index'
+    ),
+    url(
+        r'^organizations/(?P<organization_slug>[^\/]+)/api-keys/(?P<api_key_id>[^\/]+)/$',
+        OrganizationApiKeyDetailsEndpoint.as_view(),
+        name='sentry-api-0-organization-api-key-details'
+    ),
+    url(
         r'^organizations/(?P<organization_slug>[^\/]+)/audit-logs/$',
         OrganizationAuditLogsEndpoint.as_view(),
         name='sentry-api-0-organization-audit-logs'
+    ),
+    url(
+        r'^organizations/(?P<organization_slug>[^\/]+)/config/integrations/$',
+        OrganizationConfigIntegrationsEndpoint.as_view(),
+        name='sentry-api-0-organization-config-integrations'
     ),
     url(
         r'^organizations/(?P<organization_slug>[^\/]+)/config/repos/$',
@@ -219,7 +240,15 @@ urlpatterns = patterns(
     url(
         r'^organizations/(?P<organization_slug>[^\/]+)/issues/new/$',
         OrganizationIssuesNewEndpoint.as_view(),
-        name='sentry-api-0-organization-issues-new'
+    ),
+    url(
+        r'^organizations/(?P<organization_slug>[^\/]+)/integrations/$',
+        OrganizationIntegrationsEndpoint.as_view(),
+        name='sentry-api-0-organization-integrations'
+    ),
+    url(
+        r'^organizations/(?P<organization_slug>[^\/]+)/integrations/(?P<integration_id>[^\/]+)/$',
+        OrganizationIntegrationDetailsEndpoint.as_view(),
     ),
     url(
         r'^organizations/(?P<organization_slug>[^\/]+)/members/$',
@@ -377,6 +406,11 @@ urlpatterns = patterns(
         r'^projects/(?P<organization_slug>[^\/]+)/(?P<project_slug>[^\/]+)/$',
         ProjectDetailsEndpoint.as_view(),
         name='sentry-api-0-project-details'
+    ),
+    url(
+        r'^projects/(?P<organization_slug>[^\/]+)/(?P<project_slug>[^\/]+)/create-sample/$',
+        ProjectCreateSampleEndpoint.as_view(),
+        name='sentry-api-0-project-create-sample'
     ),
     url(
         r'^projects/(?P<organization_slug>[^\/]+)/(?P<project_slug>[^\/]+)/docs/$',
@@ -576,6 +610,11 @@ urlpatterns = patterns(
         r'^projects/(?P<organization_slug>[^\/]+)/(?P<project_slug>[^\/]+)/reprocessing/$',
         ProjectReprocessingEndpoint.as_view(),
         name='sentry-api-0-project-reprocessing'
+    ),
+    url(
+        r'^projects/(?P<organization_slug>[^\/]+)/(?P<project_slug>[^\/]+)/processingissues/discard$',
+        ProjectProcessingIssuesDiscardEndpoint.as_view(),
+        name='sentry-api-0-project-discard-processing-issues'
     ),
 
     # Load plugin project urls

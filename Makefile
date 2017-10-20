@@ -3,7 +3,16 @@ MAKEFLAGS += --jobs=$(CPUS)
 NPM_ROOT = ./node_modules
 STATIC_DIR = src/sentry/static/sentry
 
-develop-only: update-submodules install-python install-yarn
+ifneq "$(wildcard /usr/local/opt/libxmlsec1/lib)" ""
+	LDFLAGS += -L/usr/local/opt/libxmlsec1/lib
+endif
+ifneq "$(wildcard /usr/local/opt/openssl/lib)" ""
+	LDFLAGS += -L/usr/local/opt/openssl/lib
+endif
+
+PIP = LDFLAGS="$(LDFLAGS)" pip
+
+develop-only: update-submodules install-brew install-python install-yarn
 
 develop: setup-git develop-only
 	@echo ""
@@ -12,31 +21,37 @@ install-yarn:
 	@echo "--> Installing Node dependencies"
 	@hash yarn 2> /dev/null || (echo 'Cannot continue with JavaScript dependencies. Please install yarn before proceeding. For more information refer to https://yarnpkg.com/lang/en/docs/install/'; echo 'If you are on a mac run:'; echo '  brew install yarn'; exit 1)
 	# Use NODE_ENV=development so that yarn installs both dependencies + devDependencies
-	NODE_ENV=development yarn install --ignore-optional --pure-lockfile
+	NODE_ENV=development yarn install --pure-lockfile
 	# Fix phantomjs-prebuilt not installed via yarn
 	# See: https://github.com/karma-runner/karma-phantomjs-launcher/issues/120#issuecomment-262634703
 	node ./node_modules/phantomjs-prebuilt/install.js
 
+install-brew:
+	@hash brew 2> /dev/null && brew bundle || (echo '! Homebrew not found, skipping system dependencies.')
+
 install-python:
 	# must be executed serialially
 	$(MAKE) install-python-base
-	$(MAKE) install-python-tests
+	$(MAKE) install-python-develop
 
 install-python-base:
 	@echo "--> Installing Python dependencies"
-	pip install "setuptools>=0.9.8" "pip>=8.0.0"
+	$(PIP) install "setuptools>=0.9.8" "pip>=8.0.0"
 	# order matters here, base package must install first
-	pip install -e .
-	pip install ujson
-	pip install "file://`pwd`#egg=sentry[dev]"
+	$(PIP) install -e .
+	$(PIP) install ujson
+	$(PIP) install "file://`pwd`#egg=sentry[dev]"
+
+install-python-develop:
+	$(PIP) install "file://`pwd`#egg=sentry[dev,tests]"
 
 install-python-tests:
-	pip install "file://`pwd`#egg=sentry[dev,tests,dsym]"
+	$(PIP) install "file://`pwd`#egg=sentry[dev,tests,optional]"
 
 dev-postgres: install-python
 
 dev-docs:
-	pip install -r doc-requirements.txt
+	$(PIP) install -r doc-requirements.txt
 
 reset-db:
 	@echo "--> Dropping existing 'sentry' database"
@@ -90,6 +105,11 @@ update-submodules:
 	git submodule update
 	@echo ""
 
+build-platform-assets:
+	@echo "--> Building platform assets"
+	sentry init
+	@echo "from sentry.utils.integrationdocs import sync_docs; sync_docs()" | sentry exec
+
 test: develop lint test-js test-python test-cli
 
 testloop: develop
@@ -113,21 +133,30 @@ test-js:
 	@npm run test-ci
 	@echo ""
 
-test-python:
-	@echo "--> Running Python tests"
-	py.test tests/integration tests/sentry || exit 1
+# builds and creates percy snapshots
+test-styleguide:
+	@echo "--> Building and snapshotting styleguide"
+	@npm run snapshot
 	@echo ""
 
-test-acceptance:
+test-python: build-platform-assets
+	@echo "--> Running Python tests"
+	py.test tests/integration tests/sentry --cov . --cov-report="xml:coverage.xml" --junit-xml="junit.xml" || exit 1
+	@echo ""
+
+test-network:
+	@echo "--> Building platform assets"
+	sentry init
+	@echo "from sentry.utils.integrationdocs import sync_docs; sync_docs()" | sentry exec
+	@echo "--> Running network tests"
+	py.test tests/network --cov . --cov-report="xml:coverage.xml" --junit-xml="junit.xml"
+	@echo ""
+
+test-acceptance: build-platform-assets
 	@echo "--> Building static assets"
 	@${NPM_ROOT}/.bin/webpack
 	@echo "--> Running acceptance tests"
-	py.test tests/acceptance
-	@echo ""
-
-test-python-coverage:
-	@echo "--> Running Python tests"
-	SOUTH_TESTS_MIGRATE=1 coverage run --source=src/sentry -m py.test tests/integration tests/sentry
+	py.test tests/acceptance --cov . --cov-report="xml:coverage.xml" --junit-xml="junit.xml" --html="pytest.html"
 	@echo ""
 
 lint: lint-python lint-js
@@ -143,7 +172,7 @@ lint-js:
 	@echo ""
 
 coverage: develop
-	$(MAKE) test-python-coverage
+	$(MAKE) test-python
 	coverage html
 
 publish:
@@ -154,7 +183,7 @@ extract-api-docs:
 	cd api-docs; python generator.py
 
 
-.PHONY: develop dev-postgres dev-docs setup-git build clean locale update-transifex update-submodules test testloop test-cli test-js test-python test-acceptance test-python-coverage lint lint-python lint-js coverage publish
+.PHONY: develop dev-postgres dev-docs setup-git build clean locale update-transifex update-submodules test testloop test-cli test-js test-styleguide test-python test-acceptance lint lint-python lint-js coverage publish
 
 
 ############################
@@ -163,13 +192,14 @@ extract-api-docs:
 
 # Bases for all builds
 travis-upgrade-pip:
-	python -m pip install pip==8.1.1
+	python -m pip install "pip>=9,<10"
 travis-setup-cassandra:
 	echo "create keyspace sentry with replication = {'class' : 'SimpleStrategy', 'replication_factor': 1};" | cqlsh --cqlversion=3.1.7
 	echo 'create table nodestore (key text primary key, value blob, flags int);' | cqlsh -k sentry --cqlversion=3.1.7
 travis-install-python:
 	$(MAKE) travis-upgrade-pip
-	$(MAKE) install-python install-python
+	$(MAKE) install-python-base
+	$(MAKE) install-python-tests
 	python -m pip install codecov
 travis-noop:
 	@echo "nothing to do here."
@@ -185,13 +215,14 @@ travis-install-mysql: travis-install-python
 	pip install mysqlclient
 	echo 'create database sentry;' | mysql -uroot
 travis-install-acceptance: install-yarn travis-install-postgres
+travis-install-network: travis-install-postgres
 travis-install-js:
 	$(MAKE) travis-upgrade-pip
-	$(MAKE) install-python install-yarn
+	$(MAKE) travis-install-python install-yarn
 travis-install-cli: travis-install-postgres
 travis-install-dist:
 	$(MAKE) travis-upgrade-pip
-	$(MAKE) install-python install-yarn
+	$(MAKE) travis-install-python install-yarn
 travis-install-django-18: travis-install-postgres
 	pip install "Django>=1.8,<1.9"
 
@@ -203,6 +234,7 @@ travis-lint-sqlite: lint-python
 travis-lint-postgres: lint-python
 travis-lint-mysql: lint-python
 travis-lint-acceptance: travis-noop
+travis-lint-network: lint-python
 travis-lint-js: lint-js
 travis-lint-cli: travis-noop
 travis-lint-dist: travis-noop
@@ -213,11 +245,14 @@ travis-lint-django-18: travis-lint-postgres
 # Test steps
 travis-test-danger:
 	bundle exec danger
-travis-test-sqlite: test-python-coverage
-travis-test-postgres: test-python-coverage
-travis-test-mysql: test-python-coverage
+travis-test-sqlite: test-python
+travis-test-postgres: test-python
+travis-test-mysql: test-python
 travis-test-acceptance: test-acceptance
-travis-test-js: test-js
+travis-test-network: test-network
+travis-test-js:
+	$(MAKE) test-js
+	$(MAKE) test-styleguide
 travis-test-cli: test-cli
 travis-test-dist:
 	SENTRY_BUILD=$(TRAVIS_COMMIT) SENTRY_LIGHT_BUILD=0 python setup.py sdist bdist_wheel

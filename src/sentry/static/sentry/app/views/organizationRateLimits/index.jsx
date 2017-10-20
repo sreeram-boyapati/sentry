@@ -1,16 +1,16 @@
+import PropTypes from 'prop-types';
 import React from 'react';
 
 import ApiMixin from '../../mixins/apiMixin';
 import IndicatorStore from '../../stores/indicatorStore';
-import OrganizationHomeContainer from '../../components/organizations/homeContainer';
 import OrganizationState from '../../mixins/organizationState';
 import {RangeField} from '../../components/forms';
 import {t} from '../../locale';
 
 const AccountLimit = React.createClass({
   propTypes: {
-    value: React.PropTypes.number,
-    onChange: React.PropTypes.func.isRequired
+    value: PropTypes.number,
+    onChange: PropTypes.func.isRequired
   },
 
   getRateLimitValues() {
@@ -51,7 +51,7 @@ const AccountLimit = React.createClass({
 
 const RateLimitEditor = React.createClass({
   propTypes: {
-    organization: React.PropTypes.object.isRequired
+    organization: PropTypes.object.isRequired
   },
 
   mixins: [ApiMixin],
@@ -176,7 +176,7 @@ const RateLimitEditor = React.createClass({
 
         <div className="help-block">
           {t(
-            'The maximum percentage of your account quota an individual project can consume.'
+            'The maximum percentage of your account limit an individual project can consume.'
           )}
         </div>
 
@@ -199,16 +199,14 @@ const OrganizationRateLimits = React.createClass({
     let org = this.context.organization;
 
     return (
-      <OrganizationHomeContainer>
-        <div className="box">
-          <div className="box-header">
-            <h3>{t('Rate Limits')}</h3>
-          </div>
-          <div className="box-content with-padding">
-            <RateLimitEditor organization={org} />
-          </div>
+      <div className="box">
+        <div className="box-header">
+          <h3>{t('Rate Limits')}</h3>
         </div>
-      </OrganizationHomeContainer>
+        <div className="box-content with-padding">
+          <RateLimitEditor organization={org} />
+        </div>
+      </div>
     );
   }
 });

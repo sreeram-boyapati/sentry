@@ -3,7 +3,7 @@ from __future__ import absolute_import
 from datetime import timedelta
 from django.utils import timezone
 
-from sentry.models import GroupTagValue, TagKey, TagValue
+from sentry import tagstore
 from sentry.testutils import TestCase
 
 
@@ -16,13 +16,13 @@ class GroupTagExportTest(TestCase):
 
         project = self.create_project()
         group = self.create_group(project=project)
-        TagKey.objects.create(project=project, key=key)
-        TagValue.objects.create(
-            project=project,
+        tagstore.create_tag_key(project_id=project.id, key=key)
+        tagstore.create_tag_value(
+            project_id=project.id,
             key=key,
             value=value,
         )
-        group_tag_value = GroupTagValue.objects.create(
+        group_tag_value = tagstore.create_group_tag_value(
             project_id=project.id,
             group_id=group.id,
             key=key,
