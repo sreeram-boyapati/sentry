@@ -1,36 +1,27 @@
 import PropTypes from 'prop-types';
 import React from 'react';
+import styled from 'react-emotion';
 
-import SettingsHeading from './settingsHeading';
 import SettingsNavItem from './settingsNavItem';
-import SettingsNavSection from './settingsNavSection';
 import SentryTypes from '../../../proptypes';
+
+const NavSection = styled.div`
+  margin-bottom: 20px;
+`;
+
+const SettingsHeading = styled.div`
+  color: ${p => p.theme.gray3};
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+`;
 
 export default class NavigationGroup extends React.Component {
   static propTypes = {
-    name: PropTypes.string,
-    items: PropTypes.arrayOf(
-      PropTypes.shape({
-        path: PropTypes.string.isRequired,
-        title: PropTypes.string.isRequired,
-        /**
-       * Function that is given an object with
-       * `access`, `features`
-       *
-       * Return true to show nav item, false to hide
-       */
-        show: PropTypes.oneOfType(PropTypes.func, PropTypes.bool),
-
-        /**
-       * Function that is given an object with
-       * `access`, `features`, `organization`
-       *
-       * Return number to show in badge
-       */
-        badge: PropTypes.func
-      })
-    ),
+    ...SentryTypes.NavigationGroup,
     organization: SentryTypes.Organization,
+    project: SentryTypes.Project,
     access: PropTypes.object,
     features: PropTypes.object
   };
@@ -43,7 +34,7 @@ export default class NavigationGroup extends React.Component {
     let {organization, name, items} = this.props;
 
     return (
-      <SettingsNavSection>
+      <NavSection>
         <SettingsHeading>{name}</SettingsHeading>
         {items.map(({path, title, show, badge}) => {
           if (typeof show === 'function' && !show(this.props)) return null;
@@ -59,7 +50,7 @@ export default class NavigationGroup extends React.Component {
             />
           );
         })}
-      </SettingsNavSection>
+      </NavSection>
     );
   }
 }

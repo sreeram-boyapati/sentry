@@ -121,6 +121,31 @@ export const Project = PropTypes.shape({
   status: PropTypes.string
 });
 
+export const NavigationObject = PropTypes.shape({
+  name: PropTypes.string,
+  items: PropTypes.arrayOf(
+    PropTypes.shape({
+      path: PropTypes.string.isRequired,
+      title: PropTypes.string.isRequired,
+      /**
+       * Function that is given an object with
+       * `access`, `features`
+       *
+       * Return true to show nav item, false to hide
+       */
+      show: PropTypes.oneOfType([PropTypes.func, PropTypes.bool]),
+
+      /**
+       * Function that is given an object with
+       * `access`, `features`, `organization`
+       *
+       * Return number to show in badge
+       */
+      badge: PropTypes.func
+    })
+  )
+});
+
 let SentryTypes = {
   AnyModel: PropTypes.shape({
     id: PropTypes.string.isRequired
@@ -138,6 +163,7 @@ let SentryTypes = {
   Team: PropTypes.shape({
     id: PropTypes.string.isRequired
   }),
+  NavigationObject,
   Member,
   User
 };

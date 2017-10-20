@@ -1,10 +1,13 @@
-import React from 'react';
 import {Link} from 'react-router';
-import styled from 'react-emotion';
 import {withTheme} from 'emotion-theming';
+import PropTypes from 'prop-types';
+import React from 'react';
+import styled from 'react-emotion';
 
-export default withTheme(
-  styled(({label, ...props}) => <Link {...props} children={label} />)`
+import Badge from '../../../components/badge';
+
+const StyledNavItem = withTheme(
+  styled(({...props}) => <Link {...props} />)`
     display: block;
     color: ${p => (p.active === true ? p.theme.gray5 : p.theme.gray2)};
     font-size: 14px;
@@ -28,3 +31,21 @@ export default withTheme(
     }
   `
 );
+
+class SettingsNavItem extends React.Component {
+  static propTypes = {
+    label: PropTypes.node.isRequired,
+    badge: PropTypes.node
+  };
+
+  render() {
+    let {badge, label, ...props} = this.props;
+
+    return (
+      <StyledNavItem {...props}>
+        {label} {badge ? <Badge text={badge} /> : null}
+      </StyledNavItem>
+    );
+  }
+}
+export default SettingsNavItem;
