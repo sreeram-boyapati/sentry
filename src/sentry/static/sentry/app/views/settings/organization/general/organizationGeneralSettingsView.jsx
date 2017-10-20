@@ -8,7 +8,7 @@ import OrganizationStore from '../../../../stores/organizationStore';
 
 const OrganizationGeneralSettingsView = React.createClass({
   propTypes: {
-    routes: PropTypes.arrayOf(PropTypes.object),
+    routes: PropTypes.arrayOf(PropTypes.object)
   },
 
   mixins: [ApiMixin],

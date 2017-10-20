@@ -1,14 +1,15 @@
-// import {Box} from 'grid-emotion';
 import React from 'react';
-// import styled from 'react-emotion';
 
 import ProjectContext from '../../projects/projectContext';
 import ProjectSettingsNavigation from './projectSettingsNavigation';
-// import SettingsHeading from '../components/settingsHeading';
 import SettingsLayout from '../settingsLayout';
-// import SettingsPanelItem from '../components/settingsPanelItem';
+import SentryTypes from '../../../proptypes';
 
 class ProjectSettingsLayout extends React.Component {
+  static contextTypes = {
+    organization: SentryTypes.Organization
+  };
+
   render() {
     let {orgId, projectId} = this.props.params;
 
@@ -19,6 +20,7 @@ class ProjectSettingsLayout extends React.Component {
           renderNavigation={() => <ProjectSettingsNavigation {...this.props} />}>
 
           {React.cloneElement(this.props.children, {
+            organization: this.context.organization,
             setProjectNavSection: () => {}
           })}
 

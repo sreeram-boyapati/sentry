@@ -1,56 +1,43 @@
-import {Box} from 'grid-emotion';
 import React from 'react';
 
-import SettingsHeading from '../components/settingsHeading';
-import SettingsNavItem from '../components/settingsNavItem';
-import SettingsNavSection from '../components/settingsNavSection';
+import HookStore from '../../../stores/hookStore';
+import ProjectState from '../../../mixins/projectState';
+import SettingsNavigation from '../components/settingsNavigation';
+import getConfiguration from './navgationConfiguration';
 
-class ProjectSettingsNavigation extends React.Component {
+const ProjectSettingsNavigation = React.createClass({
+  mixins: [ProjectState],
+
+  getInitialState() {
+    // Allow injection via getsentry et all
+    let org = this.getOrganization();
+    let hooks = [];
+    HookStore.get('project:settings-sidebar').forEach(cb => {
+      hooks.push(cb(org));
+    });
+
+    return {
+      hooks
+    };
+  },
+
   render() {
-    let {orgId, projectId} = this.props.params;
-    const pathPrefix = `/settings/organization/${orgId}/project/${projectId}/`;
+    let access = this.getAccess();
+    let features = this.getFeatures();
+    let org = this.getOrganization();
+    let project = this.getProject();
 
     return (
-      <Box>
-        <SettingsNavSection>
-          <SettingsHeading>Configuration</SettingsHeading>
-          <SettingsNavItem label="General" to={`${pathPrefix}`} />
-          <SettingsNavItem label="Alerts" to={`${pathPrefix}alerts/`} />
-          <SettingsNavItem label="Rate Limits" to={`${pathPrefix}quotas`} />
-          <SettingsNavItem label="Tags" to={`${pathPrefix}tags`} />
-          <SettingsNavItem label="Issue Tracking" to={`${pathPrefix}issue-tracking/`} />
-          <SettingsNavItem
-            label="Release Tracking"
-            to={`${pathPrefix}release-tracking`}
-          />
-          <SettingsNavItem label="Data Forwarding" to={`${pathPrefix}data-forwarding`} />
-          <SettingsNavItem label="Saved Searches" to={`${pathPrefix}saved-searches/`} />
-          <SettingsNavItem
-            label="Debug information files"
-            to={`${pathPrefix}debug-symbols/`}
-          />
-          <SettingsNavItem
-            label="Processing issues"
-            to={`${pathPrefix}processing-issues/`}
-          />
-        </SettingsNavSection>
-
-        <SettingsNavSection>
-          <SettingsHeading>Data</SettingsHeading>
-          <SettingsNavItem label="Basic configuration" to={`${pathPrefix}install/`} />
-          <SettingsNavItem label="CSP Reports" to={`${pathPrefix}csp/`} />
-          <SettingsNavItem label="User feedback" to={`${pathPrefix}user-feedback/`} />
-          <SettingsNavItem label="Inbound Filters" to={`${pathPrefix}filters/`} />
-          <SettingsNavItem label="Client Keys (DSN)" to={`${pathPrefix}keys/`} />
-        </SettingsNavSection>
-
-        <SettingsNavSection>
-          <SettingsHeading>Integrations</SettingsHeading>
-          <SettingsNavItem label="All Integrations" to={`${pathPrefix}plugins/`} />
-        </SettingsNavSection>
-      </Box>
+      <SettingsNavigation
+        navigationObjects={getConfiguration(project)}
+        access={access}
+        features={features}
+        organization={org}
+        project={project}
+        hooks={this.state.hooks}
+      />
     );
   }
-}
+});
 
 export default ProjectSettingsNavigation;
