@@ -8,7 +8,7 @@ import OrganizationStore from '../../../../stores/organizationStore';
 
 const OrganizationGeneralSettingsView = React.createClass({
   propTypes: {
-    route: PropTypes.object
+    routes: PropTypes.arrayOf(PropTypes.object),
   },
 
   mixins: [ApiMixin],
@@ -23,7 +23,9 @@ const OrganizationGeneralSettingsView = React.createClass({
 
   componentDidMount() {
     let fetchForm;
-    if (this.props.route.new) {
+    let {routes} = this.props;
+
+    if (routes && routes[1] && routes[1].newnew) {
       fetchForm = import('./newOrganizationSettingsForm');
     } else {
       fetchForm = import('./oldOrganizationSettingsForm');
