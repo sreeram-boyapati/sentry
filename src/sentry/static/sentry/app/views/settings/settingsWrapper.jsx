@@ -22,7 +22,7 @@ class SettingsWrapper extends React.Component {
     $(document.body).addClass('settings');
   }
   componentWillUnmount() {
-    $(document.body).addClass('settings');
+    $(document.body).removeClass('settings');
   }
 
   render() {
