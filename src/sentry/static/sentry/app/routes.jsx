@@ -119,6 +119,8 @@ const orgSettingsRoutes = [
     component={errorHandler(OrganizationProjectsView)}
   />,
 
+  <IndexRoute key="index-org-settings" component={errorHandler(OrganizationGeneralSettingsView)} />,
+
   <Route
     key="settings"
     path="settings/"
@@ -283,39 +285,22 @@ function routes() {
         />
       </Route>
 
-      <Route path="/settings/" name="Settings" component={errorHandler(SettingsWrapper)}>
+      <Route newnew path="/settings/" name="Settings" component={errorHandler(SettingsWrapper)}>
         <IndexRoute component={errorHandler(SettingsIndex)} />
         <Route path="organization/">
           <IndexRoute component={errorHandler(OrganizationPicker)} />
 
           <Route path=":orgId/" component={errorHandler(OrganizationContext)}>
 
-            <Route name="Organizations">
-              <Route component={errorHandler(OrganizationSettingsLayout)}>
-                <IndexRoute
-                  new
-                  component={errorHandler(OrganizationGeneralSettingsView)}
-                />
+            <Route component={errorHandler(OrganizationSettingsLayout)}>
+              {orgSettingsRoutes}
+            </Route>
 
-                <Route
-                  key="settings"
-                  path="settings/"
-                  name="General"
-                  new
-                  component={errorHandler(OrganizationGeneralSettingsView)}
-                />
-
-                {orgSettingsRoutes}
+            <Route name="Projects" path="project/">
+              <IndexRoute component={errorHandler(ProjectPicker)} />
+              <Route path=":projectId/" component={errorHandler(ProjectSettingsLayout)}>
+                {projectSettingsRoutes}
               </Route>
-
-              <Route name="Projects" path="project/">
-                <IndexRoute component={errorHandler(ProjectPicker)} />
-                <Route path=":projectId/" component={errorHandler(ProjectSettingsLayout)}>
-                  <IndexRoute component={ProjectSettings} />
-                  {projectSettingsRoutes}
-                </Route>
-              </Route>
-
             </Route>
 
           </Route>
