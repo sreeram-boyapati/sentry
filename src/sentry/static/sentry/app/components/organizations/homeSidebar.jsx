@@ -101,6 +101,8 @@ const HomeSidebar = React.createClass({
     let features = this.getFeatures();
     let org = this.getOrganization();
 
+    let hasNewSettings = features.has('new-settings');
+    let pathPrefix = `${hasNewSettings ? '/settings/organization' : '/organizations'}/${org.slug}`;
     let orgId = org.slug;
 
     return (
@@ -116,7 +118,7 @@ const HomeSidebar = React.createClass({
             {t('Dashboard')}
           </ListLink>
           <ListLink
-            to={`/organizations/${orgId}/teams/`}
+            to={`${pathPrefix}/teams/`}
             isActive={() => {
               // return true if path matches /organizations/slug-name/teams/ OR /organizations/slug-name/all-teams/
               return /^\/organizations\/[^\/]+\/(teams|all-teams)\/$/.test(
