@@ -8,7 +8,7 @@ import OrganizationStore from '../../../../stores/organizationStore';
 
 const OrganizationGeneralSettingsView = React.createClass({
   propTypes: {
-    route: PropTypes.object,
+    route: PropTypes.object
   },
 
   mixins: [ApiMixin],
@@ -70,8 +70,6 @@ const OrganizationGeneralSettingsView = React.createClass({
         {!this.state.loading &&
           this.state.Form &&
           <div>
-            <h3>{t('Organization Settings')}</h3>
-
             <this.state.Form
               initialData={data}
               orgId={orgId}

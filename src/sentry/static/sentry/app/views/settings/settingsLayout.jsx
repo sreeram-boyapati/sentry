@@ -35,7 +35,9 @@ class SettingsLayout extends React.Component {
 
         <Flex>
           <Box flex="0 0 210px">
-            {typeof renderNavigation === 'function' && renderNavigation()}
+            <StickySidebar>
+              {typeof renderNavigation === 'function' && renderNavigation()}
+            </StickySidebar>
           </Box>
 
           <Content>
@@ -46,5 +48,10 @@ class SettingsLayout extends React.Component {
     );
   }
 }
+
+const StickySidebar = styled.div`
+  position: sticky;
+  top: 105px;
+`;
 
 export default SettingsLayout;
