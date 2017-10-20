@@ -189,7 +189,7 @@ const orgSettingsRoutes = [
   <Route
     key="settings"
     path="settings/"
-    component={errorHandler(OrganizationSettings)}
+    component={errorHandler(OrganizationGeneralSettingsView)}
   />,
 
   <Route key="team-details" path="teams/:teamId/" component={errorHandler(TeamDetails)}>
