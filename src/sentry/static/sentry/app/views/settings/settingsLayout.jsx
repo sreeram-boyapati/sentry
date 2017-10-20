@@ -8,7 +8,6 @@ import SettingsBreadcrumb from './components/settingsBreadcrumb';
 import SettingsHeader from './components/settingsHeader';
 
 const Content = styled(Box)`
-overflow: hidden;
 flex: 1;
 `;
 
