@@ -124,7 +124,23 @@ const orgSettingsRoutes = [
     component={errorHandler(OrganizationRateLimits)}
   />,
   <Route key="repos" path="repos/" component={errorHandler(OrganizationRepositories)} />,
-  <Route key="settings" path="settings/" component={errorHandler(OrganizationSettings)} />
+  <Route
+    key="settings"
+    path="settings/"
+    component={errorHandler(OrganizationSettings)}
+  />,
+
+  <Route key="team-details" path="teams/:teamId/" component={errorHandler(TeamDetails)}>
+    <IndexRedirect to="settings/" />
+    <Route path="settings/" component={errorHandler(TeamSettings)} />
+    <Route path="members/" component={errorHandler(TeamMembers)} />
+  </Route>,
+
+  <Route key="teams" path="teams/" component={errorHandler(OrganizationTeams)} />,
+
+  <Route key="all-teams" path="all-teams/" component={errorHandler(OrganizationTeams)}>
+    <IndexRoute component={errorHandler(AllTeamsList)} />
+  </Route>
 ];
 
 function routes() {
@@ -190,32 +206,16 @@ function routes() {
       <Route path="/:orgId/" component={errorHandler(OrganizationDetails)}>
         <IndexRoute component={errorHandler(OrganizationDashboard)} />
 
+        <Route
+          path="/organizations/:orgId/teams/new/"
+          component={errorHandler(TeamCreate)}
+        />
+
         <Route path="/organizations/:orgId/" component={OrganizationHomeContainer}>
           {hooksOrgRoutes}
           {orgSettingsRoutes}
         </Route>
 
-        <Route
-          path="/organizations/:orgId/teams/"
-          component={errorHandler(OrganizationTeams)}
-        />
-        <Route
-          path="/organizations/:orgId/teams/new/"
-          component={errorHandler(TeamCreate)}
-        />
-        <Route
-          path="/organizations/:orgId/teams/:teamId/"
-          component={errorHandler(TeamDetails)}>
-          <IndexRedirect to="settings/" />
-          <Route path="settings/" component={errorHandler(TeamSettings)} />
-          <Route path="members/" component={errorHandler(TeamMembers)} />
-        </Route>
-
-        <Route
-          path="/organizations/:orgId/all-teams/"
-          component={errorHandler(OrganizationTeams)}>
-          <IndexRoute component={errorHandler(AllTeamsList)} />
-        </Route>
         <Route
           path="/organizations/:orgId/issues/assigned/"
           component={errorHandler(MyIssuesAssignedToMe)}
