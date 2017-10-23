@@ -3,6 +3,7 @@ import React from 'react';
 
 import {t} from '../../../../locale';
 import ApiMixin from '../../../../mixins/apiMixin';
+import SettingsPageHeader from '../../components/settingsPageHeader';
 import LoadingIndicator from '../../../../components/loadingIndicator';
 import OrganizationStore from '../../../../stores/organizationStore';
 
@@ -72,6 +73,7 @@ const OrganizationGeneralSettingsView = React.createClass({
         {!this.state.loading &&
           this.state.Form &&
           <div>
+            <SettingsPageHeader label={t('Organization Settings')} />
             <this.state.Form
               initialData={data}
               orgId={orgId}
