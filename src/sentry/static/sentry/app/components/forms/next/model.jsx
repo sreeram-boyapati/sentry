@@ -13,16 +13,16 @@ class FormModel {
   snapshots = [];
   initialData = {};
 
-  constructor({saveOnBlur, apiMethod, apiEndpoint, initialData}) {
-    this.fields.replace(initialData || {});
-    this.initialData = this.fields.toJSON() || {};
-    this.snapshots = [new Map(this.fields)];
-
-    this.options = {
+  constructor({saveOnBlur, apiMethod, apiEndpoint, initialData} = {}) {
+    this.setFormOptions({
       saveOnBlur,
       apiMethod,
       apiEndpoint
-    };
+    });
+
+    if (initialData) {
+      this.setInitialData(initialData);
+    }
 
     this.api = new Client();
   }
@@ -41,6 +41,24 @@ class FormModel {
 
   @computed get isError() {
     return !!Array.from(this.errors.values()).find(val => !!val);
+  }
+
+  /**
+   * Sets initial form data
+   *
+   * Also resets snapshots
+   */
+  setInitialData(initialData, {noResetSnapshots} = {}) {
+    this.fields.replace(initialData || {});
+    this.initialData = this.fields.toJSON() || {};
+
+    if (noResetSnapshots) return;
+
+    this.snapshots = [new Map(this.fields)];
+  }
+
+  setFormOptions(options) {
+    this.options = options || {};
   }
 
   createSnapshot() {}
@@ -64,6 +82,20 @@ class FormModel {
   // Returns true if not required or is required and is not empty
   isValidRequiredField(id) {
     return !this.required.has(id) || !this.required.get(id) || this.getValue(id) !== '';
+  }
+
+  doApiRequest({apiEndpoint, apiMethod, data}) {
+    let endpoint = apiEndpoint || this.options.apiEndpoint;
+    let method = apiMethod || this.options.apiMethod;
+
+    return new Promise((resolve, reject) => {
+      this.api.request(endpoint, {
+        method,
+        data,
+        success: response => resolve(response),
+        error: error => reject(error)
+      });
+    });
   }
 
   @action setValue(id, value) {
@@ -99,7 +131,7 @@ class FormModel {
       currentValue === this.initialData[id] ||
       (currentValue === '' && typeof this.initialData[id] === 'undefined')
     )
-      return;
+      return null;
 
     // shallow clone fields
     let snapshot = new Map(this.fields);
@@ -108,28 +140,30 @@ class FormModel {
     // Save field + value
     this.setFieldState(id, FormState.SAVING);
 
-    if (this.options.saveOnBlur) {
-      this.api.request(this.options.apiEndpoint, {
-        method: this.options.apiMethod,
-        data: {
-          [id]: currentValue
-          // ...formData,
-          // safeFields: extractMultilineFields(formData.safeFields),
-          // sensitiveFields: extractMultilineFields(formData.sensitiveFields)
-        },
-        success: data => {
-          // Pretend async req
-          this.setFieldState(id, FormState.READY);
-          this.initialData[id] = newValue;
-          this.snapshots.unshift(snapshot);
-        },
-        error: error => {
-          this.setFieldState(id, FormState.ERROR);
-          // this.initialData[id] = newValue;
-          // this.snapshots.unshift(snapshot);
-        }
+    if (!this.options.saveOnBlur) return null;
+
+    return this.doApiRequest({
+      data: {
+        [id]: currentValue
+        // ...formData,
+        // safeFields: extractMultilineFields(formData.safeFields),
+        // sensitiveFields: extractMultilineFields(formData.sensitiveFields)
+      }
+    })
+      .then(data => {
+        // Pretend async req
+        this.setFieldState(id, FormState.READY);
+        this.initialData[id] = newValue;
+        this.snapshots.unshift(snapshot);
+
+        return data;
+      })
+      .catch(error => {
+        this.setFieldState(id, FormState.ERROR);
+        // this.initialData[id] = newValue;
+        // this.snapshots.unshift(snapshot);
+        return error;
       });
-    }
   }
 
   @action setFieldState(id, value) {

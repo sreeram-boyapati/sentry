@@ -6,6 +6,7 @@ import ApiMixin from '../../../../mixins/apiMixin';
 import SettingsPageHeader from '../../components/settingsPageHeader';
 import LoadingIndicator from '../../../../components/loadingIndicator';
 import OrganizationStore from '../../../../stores/organizationStore';
+import getSettingsComponent from '../../../../utils/getSettingsComponent';
 
 const OrganizationGeneralSettingsView = React.createClass({
   propTypes: {
@@ -23,17 +24,15 @@ const OrganizationGeneralSettingsView = React.createClass({
   },
 
   componentDidMount() {
-    let fetchForm;
     let {routes} = this.props;
-
-    if (routes && routes[1] && routes[1].newnew) {
-      fetchForm = import('./newOrganizationSettingsForm');
-    } else {
-      fetchForm = import('./oldOrganizationSettingsForm');
-    }
+    let fetchForm = getSettingsComponent(
+      () => import('./newOrganizationSettingsForm'),
+      () => import('./oldOrganizationSettingsForm'),
+      routes
+    );
     Promise.all([this.fetchData(), fetchForm]).then(
       ([data, Form]) => {
-        this.setState({data, loading: false, Form: Form.default});
+        this.setState({data, loading: false, Form});
       },
       () => {
         this.setState({error: true, loading: false});
