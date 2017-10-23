@@ -3,10 +3,11 @@ import {Observer, observer} from 'mobx-react';
 import PropTypes from 'prop-types';
 import React from 'react';
 import ReactDOM from 'react-dom';
-import styled, {css, keyframes} from 'react-emotion';
+import styled, {keyframes} from 'react-emotion';
+import Spinner from './styled/spinner';
 
 import IconCheckmarkSm from '../../../icons/icon-checkmark-sm';
-import Spinner from './styled/spinner';
+import IconWarningSm from '../../../icons/icon-warning-sm';
 
 import FormState from '../state';
 
@@ -16,23 +17,13 @@ const SettingsPanelItemWrapper = styled(Flex)`
     align-items: center;
     transition: background .15s;
 
-    ${p => {
-  if (p.error) {
-    return css`
-        background: ${p.theme.alert.error.background};
-        border: 1px solid ${p.theme.alert.error.border};
-        margin: -1px -1px 0;
-      `;
-  }
-}}
-
     &:last-child {
       border-bottom: none;
     }
   `;
 
 const SettingsPanelItemLabel = styled.div`
-  color: ${p => (p.error ? p.theme.alert.error.textDark : p.theme.gray5)};
+  color: ${p => p.theme.gray5};
 `;
 
 const SettingsPanelItemCtrl = styled(Box)`
@@ -54,7 +45,7 @@ const SettingsPanelItemDesc = styled(Box)`
 
 const SettingsRequiredBadge = styled.div`
   display: inline-block;
-  background: ${p => (p.error ? p.theme.alert.error.textLight : p.theme.gray2)};
+  background: ${p => p.theme.gray2};
   width: 5px;
   height: 5px;
   border-radius: 5px;
@@ -63,22 +54,24 @@ const SettingsRequiredBadge = styled.div`
 `;
 
 const SettingsPanelItemHelp = styled.div`
-  color: ${p => (p.error ? p.theme.alert.error.textLight : p.theme.gray2)};
+  color: ${p => p.theme.gray2};
   font-size: 14px;
   margin-top: 8px;
   line-height: 1.4;
 `;
 
 const SettingsErrorReason = styled.div`
-  color: ${p => p.theme.alert.error.textLight};
+  color: ${p => p.theme.redDark};
   position: absolute;
-  left: 9px;
   background: #fff;
-  padding: 8px 10px;
+  left: 10px;
+  padding: 6px 8px;
+  font-weight: 600;
   font-size: 12px;
-  border: 1px solid ${p => p.theme.alert.error.border};
+  border-radius: 3px;
+  box-shadow: 0 0 0 1px rgba(64,11,54,0.15), 0 4px 20px 0 rgba(64,11,54,0.36);
+  z-index: 10000;
 `;
-
 const fadeOut = keyframes`
   0% {
     opacity: 1;
@@ -86,6 +79,25 @@ const fadeOut = keyframes`
   100% {
     opacity: 0;
   }
+`;
+
+const pulse = keyframes`
+  0% {
+    transform: scale(1,1);
+  }
+  50% {
+    transform: scale(1.15, 1.15);
+  }
+  100% {
+    transform: scale(1, 1);
+  }
+`;
+
+const SettingsError = styled.div`
+  color: ${p => p.theme.redDark};
+  animation: ${pulse} 1s ease infinite;
+  width: 16px;
+  margin-left: auto;
 `;
 
 const SettingsIsSaved = styled.div`
@@ -174,13 +186,13 @@ const SettingsIsSaved = styled.div`
     let isSaved = model.getFieldState(this.props.name) === FormState.READY;
 
     return (
-      <SettingsPanelItemWrapper error={error}>
+      <SettingsPanelItemWrapper>
         <SettingsPanelItemDesc>
           {label &&
-            <SettingsPanelItemLabel error={error}>
-              {label} {required && <SettingsRequiredBadge error={error} />}
+            <SettingsPanelItemLabel>
+              {label} {required && <SettingsRequiredBadge />}
             </SettingsPanelItemLabel>}
-          {help && <SettingsPanelItemHelp error={error}>{help}</SettingsPanelItemHelp>}
+          {help && <SettingsPanelItemHelp>{help}</SettingsPanelItemHelp>}
         </SettingsPanelItemDesc>
         <SettingsPanelItemCtrl>
 
@@ -195,7 +207,8 @@ const SettingsIsSaved = styled.div`
                     isSaved,
                     onChange: this.handleChange,
                     onBlur: this.handleBlur,
-                    value: model.getValue(this.props.name)
+                    value: model.getValue(this.props.name),
+                    error
                   }}
                 />
               );
@@ -210,8 +223,14 @@ const SettingsIsSaved = styled.div`
           {shouldShowErrorMessage && <SettingsErrorReason>{error}</SettingsErrorReason>}
         </SettingsPanelItemCtrl>
         <SettingsPanelItemCtrlState>
+
           {isSaving && <Spinner />}
           {isSaved && <SettingsIsSaved><IconCheckmarkSm size="18" /></SettingsIsSaved>}
+
+          {error &&
+            <SettingsError>
+              <IconWarningSm size="18" />
+            </SettingsError>}
         </SettingsPanelItemCtrlState>
       </SettingsPanelItemWrapper>
     );
