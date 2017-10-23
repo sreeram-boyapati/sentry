@@ -3,7 +3,10 @@ import {Observer, observer} from 'mobx-react';
 import PropTypes from 'prop-types';
 import React from 'react';
 import ReactDOM from 'react-dom';
-import styled, {css} from 'react-emotion';
+import styled, {css, keyframes} from 'react-emotion';
+
+import IconCheckmarkSm from '../../../icons/icon-checkmark-sm';
+import Spinner from './styled/spinner';
 
 import FormState from '../state';
 
@@ -39,6 +42,11 @@ const SettingsPanelItemCtrl = styled(Box)`
   position: relative;
 `;
 
+const SettingsPanelItemCtrlState = styled(Box)`
+  width: 36px;
+  text-align: right;
+`;
+
 const SettingsPanelItemDesc = styled(Box)`
   width: 50%;
   padding-right: 10px;
@@ -69,6 +77,20 @@ const SettingsErrorReason = styled.div`
   padding: 8px 10px;
   font-size: 12px;
   border: 1px solid ${p => p.theme.alert.error.border};
+`;
+
+const fadeOut = keyframes`
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+`;
+
+const SettingsIsSaved = styled.div`
+  color: ${p => p.theme.green};
+  animation: ${fadeOut} .3s ease 2s 1 forwards;
 `;
 
 @observer class FormField extends React.Component {
@@ -148,6 +170,9 @@ const SettingsErrorReason = styled.div`
     let id = this.getId();
     let model = this.context.form;
 
+    let isSaving = model.getFieldState(this.props.name) === FormState.SAVING;
+    let isSaved = model.getFieldState(this.props.name) === FormState.READY;
+
     return (
       <SettingsPanelItemWrapper error={error}>
         <SettingsPanelItemDesc>
@@ -166,8 +191,8 @@ const SettingsErrorReason = styled.div`
                   {...{
                     ...this.props,
                     id,
-                    isSaving: model.getFieldState(this.props.name) === FormState.SAVING,
-                    isSaved: model.getFieldState(this.props.name) === FormState.READY,
+                    isSaving,
+                    isSaved,
                     onChange: this.handleChange,
                     onBlur: this.handleBlur,
                     value: model.getValue(this.props.name)
@@ -184,6 +209,10 @@ const SettingsErrorReason = styled.div`
             </span>}
           {shouldShowErrorMessage && <SettingsErrorReason>{error}</SettingsErrorReason>}
         </SettingsPanelItemCtrl>
+        <SettingsPanelItemCtrlState>
+          {isSaving && <Spinner />}
+          {isSaved && <SettingsIsSaved><IconCheckmarkSm size="18" /></SettingsIsSaved>}
+        </SettingsPanelItemCtrlState>
       </SettingsPanelItemWrapper>
     );
   }
