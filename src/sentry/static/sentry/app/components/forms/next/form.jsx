@@ -1,15 +1,16 @@
+import {Observer} from 'mobx-react';
 import PropTypes from 'prop-types';
 import React from 'react';
-import {Observer} from 'mobx-react';
 
-import FormModel from './model';
 import {t} from '../../../locale';
+import Button from '../../buttons/button';
+import FormModel from './model';
 
 export default class Form extends React.Component {
   static propTypes = {
     cancelLabel: PropTypes.string,
     onCancel: PropTypes.func,
-    onSubmit: PropTypes.func.isRequired,
+    onSubmit: PropTypes.func,
     onSubmitSuccess: PropTypes.func,
     onSubmitError: PropTypes.func,
     submitDisabled: PropTypes.bool,
@@ -18,6 +19,7 @@ export default class Form extends React.Component {
     extraButton: PropTypes.element,
     initialData: PropTypes.object,
     requireChanges: PropTypes.bool,
+    model: PropTypes.object,
     allowUndo: PropTypes.bool,
     saveOnBlur: PropTypes.bool,
     apiMethod: PropTypes.string,
@@ -42,13 +44,14 @@ export default class Form extends React.Component {
 
   constructor(props, context) {
     super(props, context);
-    let {saveOnBlur, apiEndpoint, apiMethod, initialData} = props;
+    let {saveOnBlur, apiEndpoint, apiMethod, initialData, model} = props;
 
-    this.model = new FormModel({
+    this.model = model || new FormModel();
+    this.model.setInitialData(initialData);
+    this.model.setFormOptions({
       saveOnBlur,
       apiEndpoint,
-      apiMethod,
-      initialData
+      apiMethod
     });
 
     window.test = this.model;
@@ -116,8 +119,8 @@ export default class Form extends React.Component {
           <div className={footerClass} style={{marginTop: 25}}>
             <Observer>
               {() => (
-                <button
-                  className="btn btn-primary"
+                <Button
+                  priority="primary"
                   disabled={
                     this.model.isError ||
                       isSaving ||
@@ -126,19 +129,14 @@ export default class Form extends React.Component {
                   }
                   type="submit">
                   {submitLabel}
-                </button>
+                </Button>
               )}
             </Observer>
 
             {onCancel &&
-              <button
-                type="button"
-                className="btn btn-default"
-                disabled={isSaving}
-                onClick={onCancel}
-                style={{marginLeft: 5}}>
+              <Button disabled={isSaving} onClick={onCancel} style={{marginLeft: 5}}>
                 {cancelLabel}
-              </button>}
+              </Button>}
             {extraButton}
           </div>}
       </form>

@@ -149,7 +149,7 @@ const NewOrganizationSettingsForm = React.createClass({
               <TextField
                 name="name"
                 label={t('Name')}
-                help={t('The name of your organization. i.e. My Company')}
+                help={t('The name of your organization. e.g. My Company')}
                 required={true}
               />
               <TextField

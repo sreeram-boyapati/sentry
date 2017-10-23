@@ -11,7 +11,6 @@ import AdminProjects from './views/adminProjects';
 import AdminQueue from './views/adminQueue';
 import AdminSettings from './views/adminSettings';
 import AdminUsers from './views/adminUsers';
-import AllTeamsList from './views/organizationTeams/allTeamsList';
 import ApiApplicationDetails from './views/apiApplicationDetails';
 import ApiApplications from './views/apiApplications';
 import ApiLayout from './views/apiLayout';
@@ -188,17 +187,31 @@ const orgSettingsRoutes = [
     component={errorHandler(OrganizationGeneralSettingsView)}
   />,
 
-  <Route key="team-details" path="teams/:teamId/" component={errorHandler(TeamDetails)}>
+  <Route
+    key="team-details"
+    name="Teams"
+    path="teams/:teamId/"
+    component={errorHandler(TeamDetails)}
+  >
     <IndexRedirect to="settings/" />
-    <Route path="settings/" component={errorHandler(TeamSettings)} />
-    <Route path="members/" component={errorHandler(TeamMembers)} />
+    <Route path="settings/" name="Settings" component={errorHandler(TeamSettings)} />
+    <Route path="members/" name="Members" component={errorHandler(TeamMembers)} />
   </Route>,
 
-  <Route key="teams" path="teams/" component={errorHandler(OrganizationTeams)} />,
+  <Route
+    key="teams"
+    path="teams/"
+    name="Teams"
+    component={errorHandler(OrganizationTeams)}
+  />,
 
-  <Route key="all-teams" path="all-teams/" component={errorHandler(OrganizationTeams)}>
-    <IndexRoute component={errorHandler(AllTeamsList)} />
-  </Route>,
+  <Route
+    key="all-teams"
+    path="all-teams/"
+    name="All Teams"
+    allTeams
+    component={errorHandler(OrganizationTeams)}
+  />,
 ];
 
 const projectSettingsRoutes = [

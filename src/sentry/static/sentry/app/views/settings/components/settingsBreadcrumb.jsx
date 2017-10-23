@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React from 'react';
 import styled from 'react-emotion';
 import {withTheme} from 'emotion-theming';
@@ -9,6 +10,10 @@ import recreateRoute from '../../../utils/recreateRoute';
 import IconChevronRight from '../../../icons/icon-chevron-right';
 
 class SettingsBreadcrumb extends React.Component {
+  static propTypes = {
+    routes: PropTypes.array
+  };
+
   static contextTypes = {
     organization: SentryTypes.Organization
   };
@@ -22,7 +27,7 @@ class SettingsBreadcrumb extends React.Component {
         {routesWithNames.map((route, i) => {
           let isLast = i === lastRouteIndex;
           return (
-            <span key={route.name}>
+            <span key={`${route.name}:${route.path}`}>
               <Crumb to={recreateRoute(route, {routes, params})}>
                 {route.name}
               </Crumb>

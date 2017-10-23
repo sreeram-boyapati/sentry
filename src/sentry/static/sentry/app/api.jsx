@@ -111,6 +111,24 @@ export class Client {
     return this.activeRequests[id];
   }
 
+  requestPromise(path, options = {}) {
+    return new Promise((resolve, reject) => {
+      this.request(path, {
+        ...options,
+        success: (data, ...args) => {
+          resolve(data);
+          if (typeof options.success !== 'function') return;
+          options.success(data, ...args);
+        },
+        error: (error, ...args) => {
+          reject(error);
+          if (typeof options.error !== 'function') return;
+          options.error(error, ...args);
+        }
+      });
+    });
+  }
+
   _chain(...funcs) {
     funcs = funcs.filter(f => !_.isUndefined(f) && f);
     return (...args) => {

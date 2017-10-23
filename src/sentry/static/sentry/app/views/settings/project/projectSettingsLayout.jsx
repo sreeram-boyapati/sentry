@@ -19,10 +19,11 @@ class ProjectSettingsLayout extends React.Component {
           {...this.props}
           renderNavigation={() => <ProjectSettingsNavigation {...this.props} />}>
 
-          {React.cloneElement(this.props.children, {
-            organization: this.context.organization,
-            setProjectNavSection: () => {}
-          })}
+          {this.props.children &&
+            React.cloneElement(this.props.children, {
+              organization: this.context.organization,
+              setProjectNavSection: () => {}
+            })}
 
         </SettingsLayout>
       </ProjectContext>
