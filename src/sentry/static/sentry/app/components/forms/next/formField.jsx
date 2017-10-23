@@ -1,6 +1,5 @@
 import {Box, Flex} from 'grid-emotion';
 import {Observer, observer} from 'mobx-react';
-import {withTheme} from 'emotion-theming';
 import PropTypes from 'prop-types';
 import React from 'react';
 import ReactDOM from 'react-dom';
@@ -8,28 +7,26 @@ import styled, {css} from 'react-emotion';
 
 import FormState from '../state';
 
-const SettingsPanelItemWrapper = withTheme(
-  styled(Flex)`
+const SettingsPanelItemWrapper = styled(Flex)`
     padding: 15px 20px;
     border-bottom: 1px solid ${p => p.theme.borderLight};
     align-items: center;
     transition: background .15s;
 
     ${p => {
-    if (p.error) {
-      return css`
+  if (p.error) {
+    return css`
         background: ${p.theme.alert.error.background};
         border: 1px solid ${p.theme.alert.error.border};
         margin: -1px -1px 0;
       `;
-    }
-  }}
+  }
+}}
 
     &:last-child {
       border-bottom: none;
     }
-  `
-);
+  `;
 
 const SettingsPanelItemLabel = styled.div`
   color: ${p => (p.error ? p.theme.alert.error.textDark : p.theme.gray5)};
@@ -47,17 +44,15 @@ const SettingsPanelItemDesc = styled(Box)`
   padding-right: 10px;
 `;
 
-const SettingsRequiredBadge = withTheme(
-  styled.div`
-    display: inline-block;
-    background: ${p => (p.error ? p.theme.alert.error.textLight : p.theme.gray2)};
-    width: 5px;
-    height: 5px;
-    border-radius: 5px;
-    text-indent: -9999em;
-    vertical-align: super;
-  `
-);
+const SettingsRequiredBadge = styled.div`
+  display: inline-block;
+  background: ${p => (p.error ? p.theme.alert.error.textLight : p.theme.gray2)};
+  width: 5px;
+  height: 5px;
+  border-radius: 5px;
+  text-indent: -9999em;
+  vertical-align: super;
+`;
 
 const SettingsPanelItemHelp = styled.div`
   color: ${p => (p.error ? p.theme.alert.error.textLight : p.theme.gray2)};
@@ -66,17 +61,15 @@ const SettingsPanelItemHelp = styled.div`
   line-height: 1.4;
 `;
 
-const SettingsErrorReason = withTheme(
-  styled.div`
-    color: ${p => p.theme.alert.error.textLight};
-    position: absolute;
-    left: 9px;
-    background: #fff;
-    padding: 8px 10px;
-    font-size: 12px;
-    border: 1px solid ${p => p.theme.alert.error.border};
-  `
-);
+const SettingsErrorReason = styled.div`
+  color: ${p => p.theme.alert.error.textLight};
+  position: absolute;
+  left: 9px;
+  background: #fff;
+  padding: 8px 10px;
+  font-size: 12px;
+  border: 1px solid ${p => p.theme.alert.error.border};
+`;
 
 @observer class FormField extends React.Component {
   static propTypes = {
