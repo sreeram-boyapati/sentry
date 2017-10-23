@@ -5,19 +5,20 @@ const inputStyles = props => css`
   display: block;
   width: 100%;
   border: 0;
+  border-radius: 2px;
   padding: 10px;
   transition: border .2s ease;
 
   &:focus {
     outline: none;
-    background: ${p => (props.error ? '#fff' : '#f7f7f9')};
+    background: #f7f7f9;
     border-bottom-color: ${p => props.theme.blue};
   }
 
   ${p => {
   if (props.hover) {
     return css`
-      background: ${p => (props.error ? '#fff' : props.theme.offWhite)};
+      background: ${props.error ? '#fff' : props.theme.offWhite};
       `;
   }
 }}
@@ -25,9 +26,9 @@ const inputStyles = props => css`
  ${p => {
   if (props.error) {
     return css`
-    box-shadow: 0 0 0 1px ${props.theme.alert.error.border};
-    &:hover:focus {
-      background: #fff !important;
+    background: #f7f7f9;
+    &:hover, &:focus {
+      background: #f7f7f9};
     }
     `;
   }
@@ -38,7 +39,4 @@ const inputStyles = props => css`
   }
 `;
 
-
-export {
-  inputStyles,
-};
+export {inputStyles};
