@@ -1,15 +1,15 @@
 import {Box, Flex} from 'grid-emotion';
-import {Observer, observer} from 'mobx-react';
+import {Observer} from 'mobx-react';
 import PropTypes from 'prop-types';
 import React from 'react';
 import ReactDOM from 'react-dom';
 import styled, {keyframes} from 'react-emotion';
-import Spinner from './styled/spinner';
 
+import {defined} from '../../../utils';
+import FormState from '../state';
 import IconCheckmarkSm from '../../../icons/icon-checkmark-sm';
 import IconWarningSm from '../../../icons/icon-warning-sm';
-
-import FormState from '../state';
+import Spinner from './styled/spinner';
 
 const SettingsPanelItemWrapper = styled(Flex)`
     padding: 15px 20px;
@@ -105,7 +105,22 @@ const SettingsIsSaved = styled.div`
   animation: ${fadeOut} .3s ease 2s 1 forwards;
 `;
 
-@observer class FormField extends React.Component {
+/**
+ * Some fields don't need to implement their own onChange handlers, in
+ * which case we will receive an Event, but if they do we should handle
+ * the case where they return a value as the first argument.
+ */
+const getValueFromEvent = (valueOrEvent, e) => {
+  let event = e || valueOrEvent;
+  let value = defined(e) ? valueOrEvent : event && event.target && event.target.value;
+
+  return {
+    value,
+    event
+  };
+};
+
+class FormField extends React.Component {
   static propTypes = {
     name: PropTypes.string.isRequired,
     /** Inline style */
@@ -121,6 +136,9 @@ const SettingsIsSaved = styled.div`
 
     // the following should only be used without form context
     onChange: PropTypes.func,
+    onBlur: PropTypes.func,
+    onMouseOver: PropTypes.func,
+    onMouseOut: PropTypes.func,
     error: PropTypes.string,
     value: PropTypes.any
   };
@@ -132,15 +150,13 @@ const SettingsIsSaved = styled.div`
   };
 
   static contextTypes = {
-    saveOnBlur: PropTypes.bool,
     form: PropTypes.object
   };
 
   componentDidMount() {
-    // Tell model this field is required
-    // TODO?: add more validation types
     // this.attachTooltips();
-    this.context.form.setRequired(this.props.name, this.props.required);
+    // Tell model about this field's props
+    this.getModel().setFieldDescriptor(this.props.name, this.props);
   }
 
   componentWillUnmount() {
@@ -157,33 +173,68 @@ const SettingsIsSaved = styled.div`
   }
 
   getError(props, context) {
-    return this.context.form.getError(this.props.name);
+    return this.getModel().getError(this.props.name);
   }
 
   getId() {
     return `id-${this.props.name}`;
   }
 
-  handleChange = value => {
-    this.context.form.setValue(this.props.name, value);
-    this.props.onChange && this.props.onChange(value);
+  getModel() {
+    return this.context.form;
+  }
+
+  /**
+   * Set field's hover state and propagate callbacks
+   */
+  handleHover = (mouseOver, ...args) => {
+    let {name, onMouseOver, onMouseOut} = this.props;
+    let model = this.getModel();
+
+    model.setFieldState(name, FormState.HOVER, mouseOver);
+    if (onMouseOver) {
+      onMouseOver(...args);
+    }
+    if (onMouseOut) {
+      onMouseOut(...args);
+    }
   };
 
-  handleBlur = value => {
-    if (!this.context.saveOnBlur) return;
+  /**
+   * Update field value in form model
+   */
+  handleChange = (...args) => {
+    let {name, onChange} = this.props;
+    let {value, event} = getValueFromEvent(...args);
+    let model = this.getModel();
 
-    this.context.form.saveField(this.props.name, value);
+    if (onChange) {
+      onChange(value, event);
+    }
+
+    model.setValue(name, value);
+  };
+
+  /**
+   * Notify model of a field being blurred
+   */
+  handleBlur = (...args) => {
+    let {name, onBlur} = this.props;
+    let {value, event} = getValueFromEvent(...args);
+    let model = this.getModel();
+
+    if (onBlur) {
+      onBlur(value, event);
+    }
+
+    // Always call this, so model can decide what to do
+    model.saveField(name, value);
   };
 
   render() {
     let {required, label, disabled, disabledReason, hideErrorMessage, help} = this.props;
-    let error = this.getError();
-    let shouldShowErrorMessage = error && !hideErrorMessage;
     let id = this.getId();
-    let model = this.context.form;
-
-    let isSaving = model.getFieldState(this.props.name) === FormState.SAVING;
-    let isSaved = model.getFieldState(this.props.name) === FormState.READY;
+    let model = this.getModel();
 
     return (
       <SettingsPanelItemWrapper>
@@ -198,13 +249,16 @@ const SettingsIsSaved = styled.div`
 
           <Observer>
             {() => {
+              let error = this.getError();
+
               return (
                 <this.props.children
                   {...{
                     ...this.props,
                     id,
-                    isSaving,
-                    isSaved,
+                    hover: model.getFieldState(this.props.name, FormState.HOVER),
+                    onMouseOver: e => this.handleHover(true, e),
+                    onMouseOut: e => this.handleHover(false, e),
                     onChange: this.handleChange,
                     onBlur: this.handleBlur,
                     value: model.getValue(this.props.name),
@@ -220,17 +274,46 @@ const SettingsIsSaved = styled.div`
             <span className="disabled-indicator tip" title={disabledReason}>
               <span className="icon-question" />
             </span>}
-          {shouldShowErrorMessage && <SettingsErrorReason>{error}</SettingsErrorReason>}
+
+          <Observer>
+            {() => {
+              let error = this.getError();
+              let shouldShowErrorMessage = error && !hideErrorMessage;
+              if (!shouldShowErrorMessage) return null;
+              return <SettingsErrorReason>{error}</SettingsErrorReason>;
+            }}
+          </Observer>
         </SettingsPanelItemCtrl>
         <SettingsPanelItemCtrlState>
 
-          {isSaving && <Spinner />}
-          {isSaved && <SettingsIsSaved><IconCheckmarkSm size="18" /></SettingsIsSaved>}
+          <Observer>
+            {() => {
+              let isSaving = model.getFieldState(this.props.name, FormState.SAVING);
+              let isSaved = model.getFieldState(this.props.name, FormState.READY);
 
-          {error &&
-            <SettingsError>
-              <IconWarningSm size="18" />
-            </SettingsError>}
+              if (isSaving) {
+                return <Spinner />;
+              } else if (isSaved) {
+                return <SettingsIsSaved><IconCheckmarkSm size="18" /></SettingsIsSaved>;
+              }
+
+              return null;
+            }}
+          </Observer>
+
+          <Observer>
+            {() => {
+              let error = this.getError();
+
+              if (!error) return null;
+
+              return (
+                <SettingsError>
+                  <IconWarningSm size="18" />
+                </SettingsError>
+              );
+            }}
+          </Observer>
         </SettingsPanelItemCtrlState>
       </SettingsPanelItemWrapper>
     );

@@ -6,6 +6,7 @@ import {
   addErrorMessage,
   addSuccessMessage
 } from '../../../../actionCreators/settingsIndicator';
+import {extractMultilineFields} from '../../../../utils';
 import {t} from '../../../../locale';
 import ApiMixin from '../../../../mixins/apiMixin';
 import BooleanField from '../../../../components/forms/next/booleanField';
@@ -26,34 +27,6 @@ const NewOrganizationSettingsForm = React.createClass({
   },
 
   mixins: [ApiMixin],
-
-  getInitialState() {
-    return {
-      formData: this.buildFormData(this.props.initialData),
-      errors: {},
-      hasChanges: false
-    };
-  },
-
-  buildFormData(data) {
-    let result = {
-      name: data.name,
-      slug: data.slug,
-      openMembership: data.openMembership,
-      allowSharedIssues: data.allowSharedIssues,
-      isEarlyAdopter: data.isEarlyAdopter,
-      enhancedPrivacy: data.enhancedPrivacy,
-      dataScrubber: data.dataScrubber,
-      dataScrubberDefaults: data.dataScrubberDefaults,
-      scrubIPAddresses: data.scrubIPAddresses,
-      safeFields: data.safeFields.join('\n'),
-      sensitiveFields: data.sensitiveFields.join('\n')
-    };
-    if (this.props.access.has('org:admin')) {
-      result.defaultRole = data.defaultRole;
-    }
-    return result;
-  },
 
   render() {
     let {access, initialData, orgId} = this.props;
@@ -103,19 +76,18 @@ const NewOrganizationSettingsForm = React.createClass({
                 name="name"
                 label={t('Name')}
                 help={t('The name of your organization. e.g. My Company')}
-                required={true}
+                required
               />
               <TextField
                 name="slug"
                 label={t('Short name')}
                 help={t('A unique ID used to identify this organization.')}
-                required={true}
+                required
               />
               <BooleanField
                 name="isEarlyAdopter"
                 label={t('Early Adopter')}
                 help={t("Opt-in to new features before they're released to the public.")}
-                required={false}
               />
             </PanelBody>
           </Panel>
@@ -132,15 +104,16 @@ const NewOrganizationSettingsForm = React.createClass({
                   name="defaultRole"
                   label={t('Default Role')}
                   choices={initialData.availableRoles.map(r => [r.id, r.name])}
+                  getValue={val => (this.props.access.has('org:admin') ? val : undefined)}
                   help={t('The default role new members will receive.')}
-                  required={true}
+                  required
                 />}
 
               <BooleanField
                 name="openMembership"
                 label={t('Open Membership')}
                 help={t('Allow organization members to freely join or leave any team.')}
-                required={true}
+                required
               />
             </PanelBody>
           </Panel>
@@ -158,7 +131,6 @@ const NewOrganizationSettingsForm = React.createClass({
                 help={t(
                   'Enable sharing of limited details on issues to anonymous users.'
                 )}
-                required={false}
               />
 
               <BooleanField
@@ -167,7 +139,6 @@ const NewOrganizationSettingsForm = React.createClass({
                 help={t(
                   'Enable enhanced privacy controls to limit personally identifiable information (PII) as well as source code in things like notifications.'
                 )}
-                required={false}
               />
 
               <BooleanField
@@ -176,7 +147,6 @@ const NewOrganizationSettingsForm = React.createClass({
                 help={t(
                   'Require server-side data scrubbing be enabled for all projects.'
                 )}
-                required={false}
               />
 
               <BooleanField
@@ -185,7 +155,7 @@ const NewOrganizationSettingsForm = React.createClass({
                 help={t(
                   'Require the default scrubbers be applied to prevent things like passwords and credit cards from being stored for all projects.'
                 )}
-                required={true}
+                required
               />
 
               <TextareaField
@@ -193,7 +163,8 @@ const NewOrganizationSettingsForm = React.createClass({
                 label={t('Global sensitive fields')}
                 help={sensitiveFieldsHelp}
                 placeholder={t('e.g. email')}
-                required={false}
+                getValue={val => extractMultilineFields(val)}
+                setValue={val => val.join('\n')}
               />
 
               <TextareaField
@@ -201,7 +172,8 @@ const NewOrganizationSettingsForm = React.createClass({
                 label={t('Global safe fields')}
                 help={safeFieldsHelp}
                 placeholder={t('e.g. email')}
-                required={false}
+                getValue={val => extractMultilineFields(val)}
+                setValue={val => val.join('\n')}
               />
 
               <BooleanField
@@ -210,7 +182,6 @@ const NewOrganizationSettingsForm = React.createClass({
                 help={t(
                   'Preventing IP addresses from being stored for new events on all projects.'
                 )}
-                required={false}
               />
             </PanelBody>
           </Panel>

@@ -74,6 +74,11 @@ export default class Form extends React.Component {
     };
   }
 
+  componentWillUnmount() {
+    this.model.reset();
+    this.model = null;
+  }
+
   onSubmit = e => {
     e.preventDefault();
     if (this.model.isSaving) {
