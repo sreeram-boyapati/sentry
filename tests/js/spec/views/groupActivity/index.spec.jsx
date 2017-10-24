@@ -21,7 +21,7 @@ describe('GroupActivity', function() {
     let wrapper = shallow(<GroupActivity group={{id: '1337', activity: []}} />, {
       context: {
         group: {id: '1337'},
-        project: {id: 'foo'},
+        project: {id: 'foo', slug: 'foo', name: 'Foo'},
         team: {id: '1'},
         organization: {id: 'bar'}
       }
@@ -34,7 +34,7 @@ describe('GroupActivity', function() {
       this.instance = shallow(<GroupActivity group={{id: '1337', activity: []}} />, {
         context: {
           group: {id: '1337'},
-          project: {id: 'foo'},
+          project: {id: 'foo', slug: 'foo', name: 'Foo'},
           team: {id: '1'},
           organization: {id: 'bar'}
         }
