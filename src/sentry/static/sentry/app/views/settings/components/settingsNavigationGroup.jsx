@@ -27,11 +27,13 @@ export default class NavigationGroup extends React.Component {
   };
 
   static contextTypes = {
+    router: PropTypes.object,
     location: PropTypes.object
   };
 
   render() {
     let {organization, name, items} = this.props;
+    let {router} = this.context;
 
     return (
       <NavSection>
@@ -40,11 +42,13 @@ export default class NavigationGroup extends React.Component {
           if (typeof show === 'function' && !show(this.props)) return null;
           if (typeof show !== 'undefined' && !show) return null;
           let badgeResult = typeof badge === 'function' ? badge(this.props) : null;
+          let to = path.replace(':orgId', organization.slug);
 
           return (
             <SettingsNavItem
+              active={router.isActive(to)}
               key={title}
-              to={path.replace(':orgId', organization.slug)}
+              to={to}
               label={title}
               badge={badgeResult}
             />

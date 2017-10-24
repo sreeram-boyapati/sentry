@@ -1,11 +1,15 @@
 import PropTypes from 'prop-types';
 import React from 'react';
 
-import AsyncView from '../../asyncView';
+import {
+  addErrorMessage,
+  addSuccessMessage
+} from '../../../actionCreators/settingsIndicator';
 import {t} from '../../../locale';
-import TextField from '../../../components/forms/next/textField';
+import AsyncView from '../../asyncView';
 import Form from '../../../components/forms/next/form';
 import TeamModel from './model';
+import TextField from '../../../components/forms/next/textField';
 
 export default class TeamSettings extends AsyncView {
   static propTypes = {
@@ -27,7 +31,6 @@ export default class TeamSettings extends AsyncView {
   }
 
   renderBody() {
-    let {orgId, teamId} = this.props.params;
     let team = this.props.team;
 
     return (
@@ -35,14 +38,14 @@ export default class TeamSettings extends AsyncView {
         <div className="box-content with-padding">
           <Form
             model={this.model}
-            apiMethod="PUT"
-            apiEndpoint={`/teams/${orgId}/${teamId}/`}
+            saveOnBlur
+            allowUndo
+            onSubmitSuccess={() => addSuccessMessage('Change saved', 3000)}
+            onSubmitError={() => addErrorMessage('Unable to save change', 3000)}
             initialData={{
               name: team.name,
               slug: team.slug
-            }}
-            saveOnBlur
-            allowUndo>
+            }}>
             <TextField
               name="name"
               label={t('Name')}

@@ -29,7 +29,7 @@ class SettingsLayout extends React.Component {
           <Box flex="1">
             <SettingsBreadcrumb params={params} routes={childRoutes} route={childRoute} />
           </Box>
-          <SettingsActivity>Saving dem changes...</SettingsActivity>
+          <SettingsActivity />
         </SettingsHeader>
 
         <Flex>

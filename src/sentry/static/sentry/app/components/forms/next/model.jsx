@@ -13,12 +13,8 @@ class FormModel {
   snapshots = [];
   initialData = {};
 
-  constructor({saveOnBlur, apiMethod, apiEndpoint, initialData} = {}) {
-    this.setFormOptions({
-      saveOnBlur,
-      apiMethod,
-      apiEndpoint
-    });
+  constructor({initialData, ...options} = {}) {
+    this.setFormOptions(options);
 
     if (initialData) {
       this.setInitialData(initialData);
@@ -84,6 +80,10 @@ class FormModel {
     return !this.required.has(id) || !this.required.get(id) || this.getValue(id) !== '';
   }
 
+  isValidField(id) {
+    return this.isValidRequiredField(id);
+  }
+
   doApiRequest({apiEndpoint, apiMethod, data}) {
     let endpoint = apiEndpoint || this.options.apiEndpoint;
     let method = apiMethod || this.options.apiMethod;
@@ -99,7 +99,6 @@ class FormModel {
   }
 
   @action setValue(id, value) {
-    console.log('set value', id, value);
     this.fields.set(id, value);
 
     // specifically check for empty string, 0 should be allowed
@@ -133,6 +132,9 @@ class FormModel {
     )
       return null;
 
+    // Check for error first
+    if (!this.isValidField(id)) return null;
+
     // shallow clone fields
     let snapshot = new Map(this.fields);
     let newValue = this.getValue(id);
@@ -156,10 +158,19 @@ class FormModel {
         this.initialData[id] = newValue;
         this.snapshots.unshift(snapshot);
 
+        if (this.options.onSubmitSuccess) {
+          this.options.onSubmitSuccess(data);
+        }
+
         return data;
       })
       .catch(error => {
         this.setFieldState(id, FormState.ERROR);
+
+        if (this.options.onSubmitError) {
+          this.options.onSubmitError(error);
+        }
+
         // this.initialData[id] = newValue;
         // this.snapshots.unshift(snapshot);
         return error;

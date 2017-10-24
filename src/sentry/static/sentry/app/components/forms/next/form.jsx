@@ -44,11 +44,21 @@ export default class Form extends React.Component {
 
   constructor(props, context) {
     super(props, context);
-    let {saveOnBlur, apiEndpoint, apiMethod, initialData, model} = props;
+    let {
+      saveOnBlur,
+      apiEndpoint,
+      apiMethod,
+      onSubmitSuccess,
+      onSubmitError,
+      initialData,
+      model
+    } = props;
 
     this.model = model || new FormModel();
     this.model.setInitialData(initialData);
     this.model.setFormOptions({
+      onSubmitSuccess,
+      onSubmitError,
       saveOnBlur,
       apiEndpoint,
       apiMethod
@@ -101,18 +111,6 @@ export default class Form extends React.Component {
 
     return (
       <form onSubmit={this.onSubmit} className={className}>
-        <Observer>
-          {() => {
-            return this.model.isError
-              ? <div className="alert alert-error alert-block">
-                  {t(
-                    'Unable to save your changes. Please ensure all fields are valid and try again.'
-                  )}
-                </div>
-              : null;
-          }}
-        </Observer>
-
         {children}
 
         {shouldShowFooter &&
