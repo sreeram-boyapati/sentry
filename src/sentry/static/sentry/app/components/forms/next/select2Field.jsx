@@ -29,7 +29,7 @@ export default class Select2Field extends React.Component {
     }
   }
 
-  onChange = (onChange, e) => {
+  onChange = (onBlur, onChange, e) => {
     if (this.props.multiple) {
       let options = e.target.options;
       let value = [];
@@ -40,15 +40,19 @@ export default class Select2Field extends React.Component {
       }
       onChange(value, e);
     } else {
-      onChange(e.target.value, e);
+      let value = e.target.value;
+      onChange(value, e);
+
+      // Not multplie, also call onBlur to handle saveOnBlur behavior
+      onBlur(value, e);
     }
   };
 
-  handleSelectMount = (onChange, ref) => {
+  handleSelectMount = (onBlur, onChange, ref) => {
     if (ref) {
       jQuery(ref)
         .select2(this.getSelect2Options())
-        .on('change', this.onChange.bind(this, onChange));
+        .on('change', this.onChange.bind(this, onBlur, onChange));
     } else {
       jQuery(this.select).select2('destroy');
     }
@@ -69,9 +73,13 @@ export default class Select2Field extends React.Component {
     return (
       <InputField
         {...this.props}
-        field={({onChange, ...props}) => (
-          <select ref={ref => this.handleSelectMount(onChange, ref)} {...props}>
-            {(this.props.choices || []).map(choice => {
+        field={({onChange, onBlur, ...props}) => (
+          <select
+            ref={ref => this.handleSelectMount(onBlur, onChange, ref)}
+            style={{width: '100%'}}
+            onChange={() => {}}
+            value={props.value}>
+            {(props.choices || []).map(choice => {
               return (
                 <option key={choice[0]} value={choice[0]}>
                   {choice[1]}
