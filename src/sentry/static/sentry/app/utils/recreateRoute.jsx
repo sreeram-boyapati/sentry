@@ -1,5 +1,7 @@
 import {findLastIndex} from 'lodash';
 
+import replaceRouterParams from './replaceRouterParams';
+
 export default function recreateRoute(to, {routes, params, stepBack}) {
   let paths = routes.map(({path}) => path || '');
   let lastRootIndex = findLastIndex(paths, path => path[0] === '/');
@@ -17,20 +19,5 @@ export default function recreateRoute(to, {routes, params, stepBack}) {
 
   let fullRoute = `${baseRoute.join('')}${routeToRoute ? '' : to}`;
 
-  // parse route params from route
-  let matches = fullRoute.match(/:\w+/g);
-
-  if (!matches || !matches.length) {
-    return fullRoute;
-  }
-
-  // replace with current params
-  matches.forEach(param => {
-    let paramName = param.slice(1);
-    if (typeof params[paramName] === 'undefined') return;
-
-    fullRoute = fullRoute.replace(param, params[paramName]);
-  });
-
-  return fullRoute;
+  return replaceRouterParams(fullRoute, params);
 }

@@ -2,8 +2,9 @@ import PropTypes from 'prop-types';
 import React from 'react';
 import styled from 'react-emotion';
 
-import SettingsNavItem from './settingsNavItem';
 import SentryTypes from '../../../proptypes';
+import SettingsNavItem from './settingsNavItem';
+import replaceRouterParams from '../../../utils/replaceRouterParams';
 
 const NavSection = styled.div`
   margin-bottom: 20px;
@@ -32,7 +33,7 @@ export default class NavigationGroup extends React.Component {
   };
 
   render() {
-    let {organization, name, items} = this.props;
+    let {organization, project, name, items} = this.props;
     let {router} = this.context;
 
     return (
@@ -42,7 +43,10 @@ export default class NavigationGroup extends React.Component {
           if (typeof show === 'function' && !show(this.props)) return null;
           if (typeof show !== 'undefined' && !show) return null;
           let badgeResult = typeof badge === 'function' ? badge(this.props) : null;
-          let to = path.replace(':orgId', organization.slug);
+          let to = replaceRouterParams(path, {
+            orgId: organization && organization.slug,
+            projectId: project && project.slug
+          });
 
           return (
             <SettingsNavItem
