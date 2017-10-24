@@ -7,6 +7,23 @@ exports[`OrganizationApiKeysView renders 1`] = `
       "orgId": "org-slug",
     }
   }
+  routes={
+    Array [
+      Object {
+        "path": "/",
+      },
+      Object {
+        "path": "/:orgId/",
+      },
+      Object {
+        "path": "/organizations/:orgId/",
+      },
+      Object {
+        "name": "API Key",
+        "path": "api-keys/",
+      },
+    ]
+  }
 >
   <DocumentTitle
     title="Organization Name API Keys"
@@ -119,12 +136,12 @@ exports[`OrganizationApiKeysView renders 1`] = `
             <td>
               <h5>
                 <Link
-                  to="/organizations/org-slug/api-keys/1"
+                  to="/organizations/org-slug/api-keys/1/"
                 >
                   <Link
                     onlyActiveOnIndex={false}
                     style={Object {}}
-                    to="/organizations/org-slug/api-keys/1"
+                    to="/organizations/org-slug/api-keys/1/"
                   >
                     <a
                       onClick={[Function]}
@@ -153,7 +170,7 @@ exports[`OrganizationApiKeysView renders 1`] = `
                     "marginRight": 4,
                   }
                 }
-                to="/organizations/org-slug/api-keys/1"
+                to="/organizations/org-slug/api-keys/1/"
               >
                 <Link
                   className="btn btn-default btn-sm"
@@ -163,7 +180,7 @@ exports[`OrganizationApiKeysView renders 1`] = `
                       "marginRight": 4,
                     }
                   }
-                  to="/organizations/org-slug/api-keys/1"
+                  to="/organizations/org-slug/api-keys/1/"
                 >
                   <a
                     className="btn btn-default btn-sm"

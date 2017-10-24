@@ -126,10 +126,6 @@ window.TestStubs = {
     ...params
   ],
 
-  AuthProvider: (...params) => ({
-    require_link: false
-  }),
-
   Project: (...params) => {
     return {
       id: '2',

@@ -10,6 +10,13 @@ const childContextTypes = {
   location: React.PropTypes.object,
 };
 
+const routes = [
+  {path: '/'},
+  {path: '/:orgId/'},
+  {path: '/organizations/:orgId/'},
+  {path: 'api-keys/', name: 'API Key'},
+];
+
 describe('OrganizationApiKeysView', function() {
   beforeEach(function() {
     Client.clearMockResponses();
@@ -26,27 +33,33 @@ describe('OrganizationApiKeysView', function() {
   });
 
   it('renders', function() {
-    let wrapper = mount(<OrganizationApiKeysView params={{orgId: 'org-slug'}} />, {
-      context: {
-        router: TestStubs.router(),
-        organization: TestStubs.Organization(),
-        location: TestStubs.location(),
-      },
-      childContextTypes,
-    });
+    let wrapper = mount(
+      <OrganizationApiKeysView params={{orgId: 'org-slug'}} routes={routes} />,
+      {
+        context: {
+          router: TestStubs.router(),
+          organization: TestStubs.Organization(),
+          location: TestStubs.location(),
+        },
+        childContextTypes,
+      }
+    );
     expect(wrapper.state('loading')).toBe(false);
     expect(wrapper).toMatchSnapshot();
   });
 
   it('can delete a key', function() {
-    let wrapper = mount(<OrganizationApiKeysView params={{orgId: 'org-slug'}} />, {
-      context: {
-        router: TestStubs.router(),
-        organization: TestStubs.Organization(),
-        location: TestStubs.location(),
-      },
-      childContextTypes,
-    });
+    let wrapper = mount(
+      <OrganizationApiKeysView params={{orgId: 'org-slug'}} routes={routes} />,
+      {
+        context: {
+          router: TestStubs.router(),
+          organization: TestStubs.Organization(),
+          location: TestStubs.location(),
+        },
+        childContextTypes,
+      }
+    );
     OrganizationApiKeysView.handleRemove = jest.fn();
     expect(OrganizationApiKeysView.handleRemove).not.toHaveBeenCalled();
 

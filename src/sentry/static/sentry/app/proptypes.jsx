@@ -113,7 +113,7 @@ export const Project = PropTypes.shape({
   color: PropTypes.string,
   dateCreated: PropTypes.string,
   features: PropTypes.arrayOf(PropTypes.string),
-  firstEvent: PropTypes.string,
+  firstEvent: PropTypes.oneOfType([PropTypes.string, PropTypes.bool]),
   isBookmarked: PropTypes.bool,
   isPublic: PropTypes.bool,
   platform: PropTypes.string,
