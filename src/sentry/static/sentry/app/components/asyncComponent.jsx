@@ -148,6 +148,7 @@ AsyncComponent.errorHandler = (component, fn) => {
       return fn(...args);
     } catch (err) {
       /*eslint no-console:0*/
+      console.error(err);
       setTimeout(() => {
         throw err;
       });
