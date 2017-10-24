@@ -5,12 +5,46 @@ import {Client} from '../../../api';
 import FormState from '../state';
 
 class FormModel {
+  /**
+   * Map of field name -> value
+   */
   @observable fields = new Map();
+
+  /**
+   * Errors for individual fields
+   * Note we don't keep error in `this.fieldState` so that we can easily
+   * See if the form is in an "error" state with the `isError` getter
+   */
   @observable errors = new Map();
-  @observable required = new Map();
+
+  /**
+   * State of individual fields
+   *
+   * Map of field name -> object
+   */
+
   @observable fieldState = new Map();
+
+  /**
+   * State of the form as a whole
+   */
   @observable formState;
+
+  /**
+   * Holds field properties as declared in <Form>
+   * Does not need to be observable since these props should never change
+   */
+  fieldDescriptor = new Map();
+
+  /**
+   * Holds a list of `fields` states
+   */
   snapshots = [];
+
+  /**
+   * POJO of field name -> value
+   * It holds field values "since last save"
+   */
   initialData = {};
 
   constructor({initialData, ...options} = {}) {
@@ -23,20 +57,39 @@ class FormModel {
     this.api = new Client();
   }
 
+  /**
+   * Reset state of model
+   */
+  reset() {
+    this.api.clear();
+    this.api = null;
+    this.fields.clear();
+    this.errors.clear();
+    this.fieldState.clear();
+    this.snapshots = [];
+    this.initialData = {};
+    this.fieldDescriptor.clear();
+  }
+
+  /**
+   * Deep equality comparison between last saved state and current fields state
+   */
   @computed get formChanged() {
-    return !_.isEqual(this.initialData.toJSON(), this.fields.toJSON(), true);
+    return !_.isEqual(this.initialData, this.fields.toJSON(), true);
   }
 
   @computed get formData() {
     return this.fields;
   }
 
+  /** Is form saving */
   @computed get isSaving() {
     return this.formState === FormState.SAVING;
   }
 
+  /** Does form have any errors */
   @computed get isError() {
-    return !!Array.from(this.errors.values()).find(val => !!val);
+    return !!this.errors.size;
   }
 
   /**
@@ -53,14 +106,51 @@ class FormModel {
     this.snapshots = [new Map(this.fields)];
   }
 
+  /**
+   * Set form options
+   */
   setFormOptions(options) {
     this.options = options || {};
   }
 
-  createSnapshot() {}
+  /**
+   * Set field properties
+   */
+  setFieldDescriptor(id, props) {
+    this.fieldDescriptor.set(id, props);
+    if (typeof props.setValue === 'function') {
+      this.initialData[id] = props.setValue(this.initialData[id]);
+      this.setValue(id, this.initialData[id]);
+    }
+  }
 
-  getFieldState(id) {
-    return this.fieldState.has(id) && this.fieldState.get(id);
+  /**
+   * Creates a cloned Map of `this.fields` and returns a closure that when called
+   * will save Map to `snapshots
+   */
+  createSnapshot() {
+    let snapshot = new Map(this.fields);
+    return () => this.snapshots.unshift(snapshot);
+  }
+
+  getDescriptor(id, key) {
+    // Needs to call `has` or else component will not be reactive if `id` doesn't exist in observable map
+    let descriptor = this.fieldDescriptor.has(id) && this.fieldDescriptor.get(id);
+    if (!descriptor) {
+      return null;
+    }
+
+    return descriptor[key];
+  }
+
+  getFieldState(id, key) {
+    // Needs to call `has` or else component will not be reactive if `id` doesn't exist in observable map
+    let fieldState = this.fieldState.has(id) && this.fieldState.get(id);
+    if (!fieldState) {
+      return null;
+    }
+
+    return fieldState[key];
   }
 
   getValue(id) {
@@ -77,7 +167,9 @@ class FormModel {
 
   // Returns true if not required or is required and is not empty
   isValidRequiredField(id) {
-    return !this.required.has(id) || !this.required.get(id) || this.getValue(id) !== '';
+    // Check field descriptor to see if field is required
+    let isRequired = this.getDescriptor(id, 'required');
+    return !isRequired || this.getValue(id) !== '';
   }
 
   isValidField(id) {
@@ -109,13 +201,6 @@ class FormModel {
     }
   }
 
-  @action addField(id, {required}) {
-    // if (!this.fields.has(id)) {
-    // this.fields.set(id, '');
-    // }
-    this.required.set(id, required);
-  }
-
   @action undo() {
     // Always have initial data snapshot
     if (this.snapshots.length < 2) return;
@@ -124,8 +209,21 @@ class FormModel {
     this.fields.replace(this.snapshots[0]);
   }
 
+  /**
+   * This is called when a field is blurred
+   *
+   * If `saveOnBlur` is set, field has changes, field does not have errors, then it will:
+   * Save a snapshot, apply any data transforms, perform api request.
+   *
+   * If successful then: 1) reset save state, 2) update `initialData`, 3) save snapshot, 4) handle callbacks
+   * If failed then: 1) reset save state, 2) add error state, 3) handle callbacks
+   */
   @action saveField(id, currentValue) {
+    // Nothing to do if `saveOnBlur` is not on
+    if (!this.options.saveOnBlur) return null;
+
     // Don't save if field hasn't changed
+    // Don't need to check for error state since initialData wouldn't have updated since last error
     if (
       currentValue === this.initialData[id] ||
       (currentValue === '' && typeof this.initialData[id] === 'undefined')
@@ -136,27 +234,29 @@ class FormModel {
     if (!this.isValidField(id)) return null;
 
     // shallow clone fields
-    let snapshot = new Map(this.fields);
+    let saveSnapshot = this.createSnapshot();
     let newValue = this.getValue(id);
 
     // Save field + value
-    this.setFieldState(id, FormState.SAVING);
+    this.setSaving(id, true);
 
-    if (!this.options.saveOnBlur) return null;
+    // Transform data before saving, this uses `getValue` defined when declaring the form
+    let fieldDescriptor = this.fieldDescriptor.get(id);
+    let serializer = typeof fieldDescriptor.getValue === 'function'
+      ? fieldDescriptor.getValue
+      : a => a;
 
-    return this.doApiRequest({
-      data: {
-        [id]: currentValue
-        // ...formData,
-        // safeFields: extractMultilineFields(formData.safeFields),
-        // sensitiveFields: extractMultilineFields(formData.sensitiveFields)
-      }
-    })
+    return this.doApiRequest({data: {[id]: serializer(newValue)}})
       .then(data => {
-        // Pretend async req
-        this.setFieldState(id, FormState.READY);
+        this.setSaving(id, false);
+
+        // Updating initialData and save snapshot
         this.initialData[id] = newValue;
-        this.snapshots.unshift(snapshot);
+
+        if (saveSnapshot) {
+          saveSnapshot();
+          saveSnapshot = null;
+        }
 
         if (this.options.onSubmitSuccess) {
           this.options.onSubmitSuccess(data);
@@ -165,34 +265,54 @@ class FormModel {
         return data;
       })
       .catch(error => {
-        this.setFieldState(id, FormState.ERROR);
+        // should we revert field value to last known state?
 
+        saveSnapshot = null;
+        this.setError(id, 'Failed to save');
+
+        console.error(error);
         if (this.options.onSubmitError) {
           this.options.onSubmitError(error);
         }
 
-        // this.initialData[id] = newValue;
-        // this.snapshots.unshift(snapshot);
         return error;
       });
   }
 
-  @action setFieldState(id, value) {
-    this.fieldState.set(id, value);
+  @action setFieldState(id, key, value) {
+    let state = {
+      ...(this.fieldState.get(id) || {}),
+      [key]: value
+    };
+    this.fieldState.set(id, state);
   }
 
+  /**
+   * Set "saving" state for field
+   */
+  @action setSaving(id, value) {
+    // When saving, reset error state
+    this.setError(id, false);
+    this.setFieldState(id, FormState.SAVING, value);
+    this.setFieldState(id, FormState.READY, !value);
+  }
+
+  /**
+   * Set "error" state for field
+   */
   @action setError(id, error) {
+    // Note we don't keep error in `this.fieldState` so that we can easily
+    // See if the form is in an "error" state with the `isError` getter
     if (!!error) {
       this.formState = FormState.ERROR;
+      this.errors.set(id, error);
     } else {
       this.formState = FormState.READY;
+      this.errors.delete(id);
     }
 
-    this.errors.set(id, error);
-  }
-
-  @action setRequired(id, required) {
-    this.required.set(id, required);
+    // Field should no longer to "saving", but is not necessarily "ready"
+    this.setFieldState(id, FormState.SAVING, false);
   }
 
   @action getData() {
