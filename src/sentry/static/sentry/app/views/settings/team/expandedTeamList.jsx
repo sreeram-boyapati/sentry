@@ -69,7 +69,11 @@ const ExpandedTeamList = React.createClass({
               {tct(
                 'There are no projects in this team. Get started by [link:creating your first project].',
                 {
-                  link: <Link to={`/organizations/${organization.slug}/projects/new/?team=${team.slug}`} />
+                  link: (
+                    <Link
+                      to={`/organizations/${organization.slug}/projects/new/?team=${team.slug}`}
+                    />
+                  )
                 }
               )}
             </p>
@@ -139,7 +143,8 @@ const ExpandedTeamList = React.createClass({
                 ? <span className="icon-star-solid bookmark" />
                 : <span className="icon-star-outline bookmark" />}
             </a>
-            <Link to={`/${org.slug}/${project.slug}/`}>
+            <Link
+              to={`/settings/organization/${org.slug}/project/${project.slug}/alerts/`}>
               <ProjectLabel project={project} organization={this.props.organization} />
             </Link>
           </h5>
