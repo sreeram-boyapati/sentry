@@ -2,6 +2,10 @@ import {Box} from 'grid-emotion';
 import PropTypes from 'prop-types';
 import React from 'react';
 
+import {
+  addErrorMessage,
+  addSuccessMessage
+} from '../../../../actionCreators/settingsIndicator';
 import {extractMultilineFields} from '../../../../utils';
 import {t} from '../../../../locale';
 import ApiMixin from '../../../../mixins/apiMixin';
@@ -9,10 +13,10 @@ import BooleanField from '../../../../components/forms/next/booleanField';
 import Form from '../../../../components/forms/next/form';
 import FormState from '../../../../components/forms/state';
 import IndicatorStore from '../../../../stores/indicatorStore';
+import Panel from '../../../../components/forms/next/styled/panel';
 import PanelBody from '../../../../components/forms/next/styled/panelBody';
 import PanelHeader from '../../../../components/forms/next/styled/panelHeader';
 import Select2Field from '../../../../components/forms/next/select2Field';
-import Panel from '../../../../components/forms/next/styled/panel';
 import TextField from '../../../../components/forms/next/textField';
 import TextareaField from '../../../../components/forms/next/textareaField';
 
@@ -137,6 +141,8 @@ const NewOrganizationSettingsForm = React.createClass({
         saveOnBlur
         allowUndo
         initialData={initialData}
+        onSubmitSuccess={() => addSuccessMessage('Change saved', 3000)}
+        onSubmitError={() => addErrorMessage('Unable to save change', 3000)}
         onSubmit={this.onSubmit}>
         <Box>
           <Panel>
