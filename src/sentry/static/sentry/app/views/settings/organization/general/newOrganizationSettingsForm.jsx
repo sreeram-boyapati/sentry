@@ -6,13 +6,10 @@ import {
   addErrorMessage,
   addSuccessMessage
 } from '../../../../actionCreators/settingsIndicator';
-import {extractMultilineFields} from '../../../../utils';
 import {t} from '../../../../locale';
 import ApiMixin from '../../../../mixins/apiMixin';
 import BooleanField from '../../../../components/forms/next/booleanField';
 import Form from '../../../../components/forms/next/form';
-import FormState from '../../../../components/forms/state';
-import IndicatorStore from '../../../../stores/indicatorStore';
 import Panel from '../../../../components/forms/next/styled/panel';
 import PanelBody from '../../../../components/forms/next/styled/panelBody';
 import PanelHeader from '../../../../components/forms/next/styled/panelHeader';
@@ -58,55 +55,6 @@ const NewOrganizationSettingsForm = React.createClass({
     return result;
   },
 
-  onSubmit(e) {
-    e.preventDefault();
-
-    if (this.state.state == FormState.SAVING) {
-      return;
-    }
-
-    this.setState(
-      {
-        state: FormState.SAVING,
-        hasChanges: false
-      },
-      () => {
-        let loadingIndicator = IndicatorStore.add(t('Saving changes..'));
-        let {orgId} = this.props;
-        let formData = this.state.formData;
-        this.api.request(`/organizations/${orgId}/`, {
-          method: 'PUT',
-          data: {
-            ...formData,
-            safeFields: extractMultilineFields(formData.safeFields),
-            sensitiveFields: extractMultilineFields(formData.sensitiveFields)
-          },
-          success: data => {
-            this.props.onSave(data);
-            this.setState({
-              state: FormState.READY,
-              errors: {}
-            });
-            IndicatorStore.remove(loadingIndicator);
-            IndicatorStore.add(t('Changes saved.'), 'success', {
-              duration: 1500
-            });
-          },
-          error: error => {
-            this.setState({
-              state: FormState.ERROR,
-              errors: error.responseJSON
-            });
-            IndicatorStore.remove(loadingIndicator);
-            IndicatorStore.add(t('Unable to save changes. Please try again.'), 'error', {
-              duration: 3000
-            });
-          }
-        });
-      }
-    );
-  },
-
   render() {
     let {access, initialData, orgId} = this.props;
 
@@ -142,8 +90,7 @@ const NewOrganizationSettingsForm = React.createClass({
         allowUndo
         initialData={initialData}
         onSubmitSuccess={() => addSuccessMessage('Change saved', 3000)}
-        onSubmitError={() => addErrorMessage('Unable to save change', 3000)}
-        onSubmit={this.onSubmit}>
+        onSubmitError={() => addErrorMessage('Unable to save change', 3000)}>
         <Box>
           <Panel>
             <PanelHeader>
