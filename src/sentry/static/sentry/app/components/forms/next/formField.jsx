@@ -137,6 +137,7 @@ class FormField extends React.Component {
     // the following should only be used without form context
     onChange: PropTypes.func,
     onBlur: PropTypes.func,
+    onKeyDown: PropTypes.func,
     onMouseOver: PropTypes.func,
     onMouseOut: PropTypes.func,
     error: PropTypes.string,
@@ -201,6 +202,25 @@ class FormField extends React.Component {
   };
 
   /**
+   * Attempt to have model save field when enter is pressed
+   * Model will determine if we should save (i.e. is `saveOnBlur` is enabled)
+   */
+  handleKeyDown = (...args) => {
+    let {name, onKeyDown} = this.props;
+    let {value, event} = getValueFromEvent(...args);
+
+    if (onKeyDown) {
+      onKeyDown(value, event);
+    }
+
+    if (event.key === 'Enter') {
+      let model = this.getModel();
+      // Always call this, so model can decide what to do
+      model.saveField(name, value);
+    }
+  };
+
+  /**
    * Update field value in form model
    */
   handleChange = (...args) => {
@@ -259,6 +279,7 @@ class FormField extends React.Component {
                     hover: model.getFieldState(this.props.name, FormState.HOVER),
                     onMouseOver: e => this.handleHover(true, e),
                     onMouseOut: e => this.handleHover(false, e),
+                    onKeyDown: this.handleKeyDown,
                     onChange: this.handleChange,
                     onBlur: this.handleBlur,
                     value: model.getValue(this.props.name),
