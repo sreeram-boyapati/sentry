@@ -1,6 +1,6 @@
-import jQuery from 'jquery';
 import PropTypes from 'prop-types';
 import React from 'react';
+import jQuery from 'jquery';
 
 import InputField from './inputField';
 
@@ -25,7 +25,7 @@ export default class Select2Field extends React.Component {
 
   componentWillUnmount() {
     if (this.select) {
-      jQuery(this.select).select2('destroy');
+      jQuery(this.select).off('change').select2('destroy');
     }
   }
 
@@ -54,7 +54,7 @@ export default class Select2Field extends React.Component {
         .select2(this.getSelect2Options())
         .on('change', this.onChange.bind(this, onBlur, onChange));
     } else {
-      jQuery(this.select).select2('destroy');
+      jQuery(this.select).select2('destroy').off('change');
     }
 
     this.select = ref;

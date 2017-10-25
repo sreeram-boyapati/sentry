@@ -270,6 +270,7 @@ class FormField extends React.Component {
           <Observer>
             {() => {
               let error = this.getError();
+              let value = model.getValue(this.props.name);
 
               return (
                 <this.props.children
@@ -282,7 +283,7 @@ class FormField extends React.Component {
                     onKeyDown: this.handleKeyDown,
                     onChange: this.handleChange,
                     onBlur: this.handleBlur,
-                    value: model.getValue(this.props.name),
+                    value,
                     error
                   }}
                 />
