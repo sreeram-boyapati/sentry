@@ -27,7 +27,7 @@ class UpdateOrganizationMemberTest(APITestCase):
 
         resp = self.client.put(path, data={'reinvite': 1})
 
-        assert resp.status_code == 204
+        assert resp.status_code == 200
         mock_send_invite_email.assert_called_once_with()
 
     @patch('sentry.models.OrganizationMember.send_invite_email')
@@ -82,10 +82,11 @@ class UpdateOrganizationMemberTest(APITestCase):
 
         resp = self.client.put(path, data={'reinvite': 1, 'regenerate': 1})
 
-        assert resp.status_code == 204
+        assert resp.status_code == 200
         member_om = OrganizationMember.objects.get(id=member_om.id)
         assert old_invite != member_om.get_invite_link()
         mock_send_invite_email.assert_called_once_with()
+        assert resp.data['invite_link'] == member_om.get_invite_link()
 
     @patch('sentry.models.OrganizationMember.send_sso_link_email')
     def test_reinvite_sso_link(self, mock_send_sso_link_email):
@@ -112,7 +113,7 @@ class UpdateOrganizationMemberTest(APITestCase):
 
         resp = self.client.put(path, data={'reinvite': 1})
 
-        assert resp.status_code == 204
+        assert resp.status_code == 200
         mock_send_sso_link_email.assert_called_once_with()
 
     # Normal users can not see invite link
