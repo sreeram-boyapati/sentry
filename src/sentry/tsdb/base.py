@@ -109,6 +109,7 @@ class BaseTSDB(Service):
         models.release,
         models.users_affected_by_group,
         models.users_affected_by_project,
+        models.frequent_releases_by_group,
     ])
 
     def __init__(self, rollups=None, legacy_rollups=None):

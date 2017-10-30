@@ -366,7 +366,7 @@ class RedisTSDBTest(TestCase):
 
     def test_frequency_tables(self):
         now = datetime.utcnow().replace(tzinfo=pytz.UTC)
-        model = TSDBModel.frequent_projects_by_organization
+        model = TSDBModel.frequent_releases_by_group
 
         rollup = 3600
 
