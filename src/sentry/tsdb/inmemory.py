@@ -74,7 +74,7 @@ class InMemoryTSDB(BaseTSDB):
                             )
 
     def get_range(self, model, keys, start, end, rollup=None, environment_id=None):
-        self.validate_arguments(model, environment_id)
+        self.validate_arguments([model], [environment_id])
 
         rollup, series = self.get_optimal_rollup_series(start, end, rollup)
 
@@ -95,7 +95,7 @@ class InMemoryTSDB(BaseTSDB):
         return dict(results_by_key)
 
     def record(self, model, key, values, timestamp=None, environment_id=None):
-        self.validate_arguments(model, environment_id)
+        self.validate_arguments([model], [environment_id])
 
         environment_ids = set([environment_id, None])
 
@@ -109,7 +109,7 @@ class InMemoryTSDB(BaseTSDB):
 
     def get_distinct_counts_series(self, model, keys, start, end=None,
                                    rollup=None, environment_id=None):
-        self.validate_arguments(model, environment_id)
+        self.validate_arguments([model], [environment_id])
 
         rollup, series = self.get_optimal_rollup_series(start, end, rollup)
 
@@ -125,7 +125,7 @@ class InMemoryTSDB(BaseTSDB):
 
     def get_distinct_counts_totals(self, model, keys, start, end=None,
                                    rollup=None, environment_id=None):
-        self.validate_arguments(model, environment_id)
+        self.validate_arguments([model], [environment_id])
 
         rollup, series = self.get_optimal_rollup_series(start, end, rollup)
 
@@ -142,7 +142,7 @@ class InMemoryTSDB(BaseTSDB):
 
     def get_distinct_counts_union(self, model, keys, start, end=None,
                                   rollup=None, environment_id=None):
-        self.validate_arguments(model, environment_id)
+        self.validate_arguments([model], [environment_id])
 
         rollup, series = self.get_optimal_rollup_series(start, end, rollup)
 

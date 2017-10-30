@@ -31,12 +31,12 @@ class DummyTSDB(BaseTSDB):
         self.validate_arguments(models, environment_ids)
 
     def get_range(self, model, keys, start, end, rollup=None, environment_id=None):
-        self.validate_arguments(model, environment_id)
+        self.validate_arguments(model, [environment_id])
         _, series = self.get_optimal_rollup_series(start, end, rollup)
         return {k: [(ts, 0) for ts in series] for k in keys}
 
     def record(self, model, key, values, timestamp=None, environment_id=None):
-        self.validate_arguments(model, environment_id)
+        self.validate_arguments(model, [environment_id])
 
     def get_distinct_counts_series(self, model, keys, start, end=None,
                                    rollup=None, environment_id=None):
@@ -46,12 +46,12 @@ class DummyTSDB(BaseTSDB):
 
     def get_distinct_counts_totals(self, model, keys, start, end=None,
                                    rollup=None, environment_id=None):
-        self.validate_arguments(model, environment_id)
+        self.validate_arguments([model], [environment_id])
         return {k: 0 for k in keys}
 
     def get_distinct_counts_union(self, model, keys, start, end=None,
                                   rollup=None, environment_id=None):
-        self.validate_arguments(model, environment_id)
+        self.validate_arguments([model], [environment_id])
         return 0
 
     def merge_distinct_counts(self, model, destination, sources,
