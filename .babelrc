@@ -11,8 +11,8 @@
     ]
   ],
   "plugins": [
-    "transform-decorators-legacy",
     "emotion",
+    "transform-decorators-legacy",
     "transform-class-properties",
     "transform-object-rest-spread",
     "lodash",
@@ -35,8 +35,8 @@
         "latest"
       ],
       "plugins": [
-        "transform-decorators-legacy",
         "emotion",
+        "transform-decorators-legacy",
         "transform-class-properties",
         "transform-object-rest-spread",
         "dynamic-import-node",
