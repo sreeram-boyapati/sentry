@@ -14,7 +14,9 @@ const StyledNavItem = withTheme(
     line-height: 30px;
     position: relative;
 
-    &:hover, &:focus, &:active {
+    &:hover,
+    &:focus,
+    &:active {
       color: ${p => p.theme.gray5};
     }
 
@@ -35,7 +37,7 @@ const StyledNavItem = withTheme(
 class SettingsNavItem extends React.Component {
   static propTypes = {
     label: PropTypes.node.isRequired,
-    badge: PropTypes.node
+    badge: PropTypes.node,
   };
 
   render() {

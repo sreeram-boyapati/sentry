@@ -11,11 +11,11 @@ import IconChevronRight from '../../../icons/icon-chevron-right';
 
 class SettingsBreadcrumb extends React.Component {
   static propTypes = {
-    routes: PropTypes.array
+    routes: PropTypes.array,
   };
 
   static contextTypes = {
-    organization: SentryTypes.Organization
+    organization: SentryTypes.Organization,
   };
 
   render() {
@@ -28,10 +28,12 @@ class SettingsBreadcrumb extends React.Component {
           let isLast = i === lastRouteIndex;
           return (
             <span key={`${route.name}:${route.path}`}>
-              <Crumb to={recreateRoute(route, {routes, params})}>
-                {route.name}
-              </Crumb>
-              {!isLast && <Divider><IconChevronRight size="15" /></Divider>}
+              <Crumb to={recreateRoute(route, {routes, params})}>{route.name}</Crumb>
+              {!isLast && (
+                <Divider>
+                  <IconChevronRight size="15" />
+                </Divider>
+              )}
             </span>
           );
         })}

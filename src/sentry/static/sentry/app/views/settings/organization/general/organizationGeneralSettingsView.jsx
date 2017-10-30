@@ -10,7 +10,7 @@ import getSettingsComponent from '../../../../utils/getSettingsComponent';
 
 const OrganizationGeneralSettingsView = React.createClass({
   propTypes: {
-    routes: PropTypes.arrayOf(PropTypes.object)
+    routes: PropTypes.arrayOf(PropTypes.object),
   },
 
   mixins: [ApiMixin],
@@ -19,7 +19,7 @@ const OrganizationGeneralSettingsView = React.createClass({
     return {
       loading: true,
       error: false,
-      data: null
+      data: null,
     };
   },
 
@@ -49,7 +49,7 @@ const OrganizationGeneralSettingsView = React.createClass({
         },
         error: () => {
           reject();
-        }
+        },
       });
     });
   },
@@ -70,42 +70,45 @@ const OrganizationGeneralSettingsView = React.createClass({
         {this.state.loading && <LoadingIndicator />}
 
         {!this.state.loading &&
-          this.state.Form &&
-          <div>
-            <SettingsPageHeader label={t('Organization Settings')} />
-            <this.state.Form
-              initialData={data}
-              orgId={orgId}
-              access={access}
-              onSave={this.onSave}
-            />
+          this.state.Form && (
+            <div>
+              <SettingsPageHeader label={t('Organization Settings')} />
+              <this.state.Form
+                initialData={data}
+                orgId={orgId}
+                access={access}
+                onSave={this.onSave}
+              />
 
-            {access.has('org:admin') &&
-              !data.isDefault &&
-              <div className="box">
-                <div className="box-header">
-                  <h3>{t('Remove Organization')}</h3>
-                </div>
-                <div className="box-content with-padding">
-                  <p>
-                    {t(
-                      'Removing this organization will delete all data including projects and their associated events.'
-                    )}
-                  </p>
+              {access.has('org:admin') &&
+                !data.isDefault && (
+                  <div className="box">
+                    <div className="box-header">
+                      <h3>{t('Remove Organization')}</h3>
+                    </div>
+                    <div className="box-content with-padding">
+                      <p>
+                        {t(
+                          'Removing this organization will delete all data including projects and their associated events.'
+                        )}
+                      </p>
 
-                  <fieldset className="form-actions">
-                    <a
-                      href={`/organizations/${orgId}/remove/`}
-                      className="btn btn-danger">
-                      {t('Remove Organization')}
-                    </a>
-                  </fieldset>
-                </div>
-              </div>}
-          </div>}
+                      <fieldset className="form-actions">
+                        <a
+                          href={`/organizations/${orgId}/remove/`}
+                          className="btn btn-danger"
+                        >
+                          {t('Remove Organization')}
+                        </a>
+                      </fieldset>
+                    </div>
+                  </div>
+                )}
+            </div>
+          )}
       </div>
     );
-  }
+  },
 });
 
 export default OrganizationGeneralSettingsView;

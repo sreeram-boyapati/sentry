@@ -13,7 +13,7 @@ import OrganizationAccessRequests from './organizationAccessRequests';
 
 class OrganizationMembersView extends OrganizationSettingsView {
   static contextTypes = {
-    organization: SentryTypes.Organization
+    organization: SentryTypes.Organization,
   };
 
   // XXX(billy): setState causes re-render of the entire view...
@@ -24,7 +24,7 @@ class OrganizationMembersView extends OrganizationSettingsView {
       ...state,
       members: [],
       invited: new Map(),
-      accessRequestBusy: new Map()
+      accessRequestBusy: new Map(),
     };
   }
 
@@ -32,7 +32,7 @@ class OrganizationMembersView extends OrganizationSettingsView {
     return [
       ['members', `/organizations/${this.props.params.orgId}/members/`],
       ['authProvider', `/organizations/${this.props.params.orgId}/auth-provider/`],
-      ['requestList', `/organizations/${this.props.params.orgId}/access-requests/`]
+      ['requestList', `/organizations/${this.props.params.orgId}/access-requests/`],
     ];
   }
 
@@ -51,11 +51,11 @@ class OrganizationMembersView extends OrganizationSettingsView {
         data: {},
         success: data => {
           this.setState(state => ({
-            members: state.members.filter(({id: existingId}) => existingId !== id)
+            members: state.members.filter(({id: existingId}) => existingId !== id),
           }));
           resolve(data);
         },
-        error: err => reject(err)
+        error: err => reject(err),
       });
     });
   };
@@ -65,7 +65,7 @@ class OrganizationMembersView extends OrganizationSettingsView {
     let {orgId} = params || {};
 
     this.setState(state => ({
-      accessRequestBusy: state.accessRequestBusy.set(id, true)
+      accessRequestBusy: state.accessRequestBusy.set(id, true),
     }));
 
     return new Promise((resolve, reject) => {
@@ -74,15 +74,17 @@ class OrganizationMembersView extends OrganizationSettingsView {
         data: {isApproved},
         success: data => {
           this.setState(state => ({
-            requestList: state.requestList.filter(({id: existingId}) => existingId !== id)
+            requestList: state.requestList.filter(
+              ({id: existingId}) => existingId !== id
+            ),
           }));
           resolve(data);
         },
         error: err => reject(err),
         complete: () =>
           this.setState(state => ({
-            accessRequestBusy: state.accessRequestBusy.set(id, false)
-          }))
+            accessRequestBusy: state.accessRequestBusy.set(id, false),
+          })),
       });
     });
   };
@@ -100,7 +102,7 @@ class OrganizationMembersView extends OrganizationSettingsView {
         IndicatorStore.add(
           tct('Removed [name] from [orgName]', {
             name,
-            orgName
+            orgName,
           }),
           'success'
         ),
@@ -108,7 +110,7 @@ class OrganizationMembersView extends OrganizationSettingsView {
         IndicatorStore.add(
           tct('Error removing [name] from [orgName]', {
             name,
-            orgName
+            orgName,
           }),
           'error'
         )
@@ -123,14 +125,14 @@ class OrganizationMembersView extends OrganizationSettingsView {
       () =>
         IndicatorStore.add(
           tct('You left [orgName]', {
-            orgName
+            orgName,
           }),
           'success'
         ),
       () =>
         IndicatorStore.add(
           tct('Error leaving [orgName]', {
-            orgName
+            orgName,
           }),
           'error'
         )
@@ -139,7 +141,7 @@ class OrganizationMembersView extends OrganizationSettingsView {
 
   handleSendInvite = ({id}) => {
     this.setState(state => ({
-      invited: state.invited.set(id, 'loading')
+      invited: state.invited.set(id, 'loading'),
     }));
 
     this.api.request(`/organizations/${this.props.params.orgId}/members/${id}/`, {
@@ -147,20 +149,20 @@ class OrganizationMembersView extends OrganizationSettingsView {
       data: {reinvite: 1},
       success: data =>
         this.setState(state => ({
-          invited: state.invited.set(id, 'success')
+          invited: state.invited.set(id, 'success'),
         })),
       error: () => {
         this.setState(state => ({
-          invited: state.invited.set(id, null)
+          invited: state.invited.set(id, null),
         }));
         IndicatorStore.add(t('Error sending invite'), 'error');
-      }
+      },
     });
   };
 
   handleAddMember = () => {
     this.setState({
-      busy: true
+      busy: true,
     });
     this.api.request(`/organizations/${this.props.params.orgId}/members/`, {
       method: 'POST',
@@ -173,7 +175,7 @@ class OrganizationMembersView extends OrganizationSettingsView {
       },
       error: () => {
         this.setState({busy: false});
-      }
+      },
     });
   };
 
@@ -195,7 +197,6 @@ class OrganizationMembersView extends OrganizationSettingsView {
 
     return (
       <div>
-
         <SpreadLayout className="page-header">
           <h3>Members</h3>
           <Button
@@ -208,7 +209,8 @@ class OrganizationMembersView extends OrganizationSettingsView {
                 ? t('You do not have enough permission to add new members')
                 : undefined
             }
-            to={`/organization/${orgId}/members/invite/`}>
+            to={`/organization/${orgId}/members/invite/`}
+          >
             <span className="icon-plus" /> {t('Invite Member')}
           </Button>
         </SpreadLayout>
@@ -261,7 +263,6 @@ class OrganizationMembersView extends OrganizationSettingsView {
             </tbody>
           </table>
         </div>
-
       </div>
     );
   }

@@ -8,12 +8,12 @@ const organizationNavgiation = [
     items: [
       {
         path: `${pathPrefix}/teams/`,
-        title: t('Projects & Teams')
+        title: t('Projects & Teams'),
       },
       {
         path: `${pathPrefix}/settings/`,
         title: 'General Settings',
-        show: ({access}) => access.has('org:write')
+        show: ({access}) => access.has('org:write'),
       },
       {
         path: `${pathPrefix}/members/`,
@@ -25,41 +25,41 @@ const organizationNavgiation = [
 
           return organization.pendingAccessRequests;
         },
-        show: ({access}) => access.has('org:read')
+        show: ({access}) => access.has('org:read'),
       },
       {
         path: `${pathPrefix}/auth/`,
         title: 'Auth',
-        show: ({access, features}) => features.has('sso') && access.has('org:admin')
+        show: ({access, features}) => features.has('sso') && access.has('org:admin'),
       },
       {
         path: `${pathPrefix}/api-keys/`,
         title: 'API Keys',
-        show: ({access, features}) => features.has('api-keys') && access.has('org:admin')
+        show: ({access, features}) => features.has('api-keys') && access.has('org:admin'),
       },
       {
         path: `${pathPrefix}/audit-log/`,
         title: 'Audit Log',
-        show: ({access}) => access.has('org:write')
+        show: ({access}) => access.has('org:write'),
       },
       {
         path: `${pathPrefix}/rate-limits/`,
         title: 'Rate Limits',
-        show: ({access}) => access.has('org:write')
+        show: ({access}) => access.has('org:write'),
       },
       {
         path: `${pathPrefix}/repos/`,
         title: 'Repositories',
-        show: ({access}) => access.has('org:write')
+        show: ({access}) => access.has('org:write'),
       },
       {
         path: `${pathPrefix}/integrations/`,
         title: 'Integrations',
         show: ({access, features}) =>
-          features.has('integrations-v3') && access.has('org:integrations')
-      }
-    ]
-  }
+          features.has('integrations-v3') && access.has('org:integrations'),
+      },
+    ],
+  },
 ];
 
 export default organizationNavgiation;

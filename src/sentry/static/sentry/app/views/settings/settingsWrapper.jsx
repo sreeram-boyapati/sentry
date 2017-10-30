@@ -5,7 +5,7 @@ import {withTheme} from 'emotion-theming';
 
 const StyledSettingsWrapper = withTheme(
   styled.div`
-    font-family: "Rubik", sans-serif;
+    font-family: 'Rubik', sans-serif;
     font-size: 16px;
     color: ${p => p.theme.gray5};
   `
@@ -28,9 +28,7 @@ class SettingsWrapper extends React.Component {
   render() {
     return (
       <StyledSettingsWrapper>
-        <StyledSettingsContainer>
-          {this.props.children}
-        </StyledSettingsContainer>
+        <StyledSettingsContainer>{this.props.children}</StyledSettingsContainer>
       </StyledSettingsWrapper>
     );
   }

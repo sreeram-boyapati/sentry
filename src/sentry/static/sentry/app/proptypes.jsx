@@ -141,9 +141,9 @@ export const NavigationObject = PropTypes.shape({
        *
        * Return number to show in badge
        */
-      badge: PropTypes.func
+      badge: PropTypes.func,
     })
-  )
+  ),
 });
 
 let SentryTypes = {

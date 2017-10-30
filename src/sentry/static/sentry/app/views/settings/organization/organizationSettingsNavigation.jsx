@@ -17,7 +17,7 @@ const OrganizationSettingsNavigation = React.createClass({
     });
 
     return {
-      hooks
+      hooks,
     };
   },
 
@@ -35,7 +35,7 @@ const OrganizationSettingsNavigation = React.createClass({
         hooks={this.state.hooks}
       />
     );
-  }
+  },
 });
 
 export default OrganizationSettingsNavigation;

@@ -9,7 +9,7 @@ let TeamActions = Reflux.createActions([
   'fetchAllError',
   'fetchDetails',
   'fetchDetailsSuccess',
-  'fetchDetailsError'
+  'fetchDetailsError',
 ]);
 
 export default TeamActions;

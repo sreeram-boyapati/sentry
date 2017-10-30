@@ -9,7 +9,8 @@ function IconChevronRight(props) {
         strokeWidth="1"
         fill="none"
         strokeLinecap="round"
-        strokeLinejoin="round">
+        strokeLinejoin="round"
+      >
         <polyline points="4.5 0.5 10.5 7.5 4.5 14.5" />
       </g>
     </Icon>

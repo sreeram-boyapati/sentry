@@ -11,15 +11,15 @@ import ProjectLabel from '../../../../../components/projectLabel';
 import SentryTypes from '../../../../../proptypes';
 
 const StyledChartCell = styled.td`
- text-align: right;
- justify-content: flex-end;
- width: 200px;
- `;
+  text-align: right;
+  justify-content: flex-end;
+  width: 200px;
+`;
 
 const ProjectListItem = React.createClass({
   propTypes: {
     project: SentryTypes.Project,
-    organization: SentryTypes.Organization
+    organization: SentryTypes.Organization,
   },
 
   mixins: [
@@ -31,14 +31,14 @@ const ProjectListItem = React.createClass({
           return this.getAttribute('data-isbookmarked') === 'true'
             ? 'Remove from bookmarks'
             : 'Add to bookmarks';
-        }
+        },
       };
-    })
+    }),
   ],
 
   getInitialState() {
     return {
-      bookmarked: null
+      bookmarked: null,
     };
   },
 
@@ -58,8 +58,8 @@ const ProjectListItem = React.createClass({
         orgId: organization.slug,
         projectId: project.slug,
         data: {
-          isBookmarked: !project.isBookmarked
-        }
+          isBookmarked: !project.isBookmarked,
+        },
       })
     );
   },
@@ -81,10 +81,13 @@ const ProjectListItem = React.createClass({
             <a
               onClick={this.toggleBookmark}
               className="tip"
-              data-isbookmarked={isBookmarked}>
-              {isBookmarked
-                ? <span className="icon-star-solid bookmark" />
-                : <span className="icon-star-outline bookmark" />}
+              data-isbookmarked={isBookmarked}
+            >
+              {isBookmarked ? (
+                <span className="icon-star-solid bookmark" />
+              ) : (
+                <span className="icon-star-outline bookmark" />
+              )}
             </a>
             <Link to={`/settings/organization/${org.slug}/project/${project.slug}/`}>
               <ProjectLabel project={project} organization={this.props.organization} />
@@ -93,14 +96,15 @@ const ProjectListItem = React.createClass({
         </td>
 
         <StyledChartCell>
-          {chartData &&
+          {chartData && (
             <LazyLoad>
               <BarChart height={20} points={chartData} label="events" />
-            </LazyLoad>}
+            </LazyLoad>
+          )}
         </StyledChartCell>
       </tr>
     );
-  }
+  },
 });
 
 export default ProjectListItem;

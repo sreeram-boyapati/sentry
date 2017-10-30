@@ -8,7 +8,8 @@ export default class OrganizationSettingsLayout extends React.Component {
     return (
       <SettingsLayout
         {...this.props}
-        renderNavigation={() => <OrganizationSettingsNavigation {...this.props} />}>
+        renderNavigation={() => <OrganizationSettingsNavigation {...this.props} />}
+      >
         {this.props.children}
       </SettingsLayout>
     );

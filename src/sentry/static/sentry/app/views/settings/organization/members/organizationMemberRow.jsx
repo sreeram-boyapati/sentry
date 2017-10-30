@@ -23,7 +23,7 @@ export default class OrganizationMemberRow extends React.PureComponent {
     canRemoveMembers: PropTypes.bool,
     canAddMembers: PropTypes.bool,
     currentUser: SentryTypes.User,
-    status: PropTypes.oneOf(['', 'loading', 'success', 'error'])
+    status: PropTypes.oneOf(['', 'loading', 'success', 'error']),
   };
 
   constructor(...args) {
@@ -67,7 +67,7 @@ export default class OrganizationMemberRow extends React.PureComponent {
       memberCanLeave,
       currentUser,
       canRemoveMembers,
-      canAddMembers
+      canAddMembers,
     } = this.props;
 
     let {id, flags, email, name, roleName, pending, user} = member;
@@ -93,125 +93,139 @@ export default class OrganizationMemberRow extends React.PureComponent {
               user
                 ? user
                 : {
-                    email
+                    email,
                   }
             }
           />
           <h5>
-            <Link to={detailsUrl}>
-              {name}
-            </Link>
+            <Link to={detailsUrl}>{name}</Link>
           </h5>
           {email}
           <br />
         </td>
 
         <td className="status">
-          {needsSso || pending
-            ? <div>
-                <div>
-                  {pending
-                    ? <strong>{t('Invited')}</strong>
-                    : <strong>{t('Missing SSO Link')}</strong>}
-                </div>
+          {needsSso || pending ? (
+            <div>
+              <div>
+                {pending ? (
+                  <strong>{t('Invited')}</strong>
+                ) : (
+                  <strong>{t('Missing SSO Link')}</strong>
+                )}
+              </div>
 
-                {isInviting &&
-                  <div style={{padding: '4px 0 3px'}}><LoadingIndicator mini /></div>}
-                {isInviteSuccessful && <span>Sent!</span>}
-                {!isInviting &&
-                  !isInviteSuccessful &&
-                  canAddMembers &&
-                  (pending || needsSso) &&
+              {isInviting && (
+                <div style={{padding: '4px 0 3px'}}>
+                  <LoadingIndicator mini />
+                </div>
+              )}
+              {isInviteSuccessful && <span>Sent!</span>}
+              {!isInviting &&
+                !isInviteSuccessful &&
+                canAddMembers &&
+                (pending || needsSso) && (
                   <Button
                     priority="primary"
                     size="xsmall"
                     onClick={this.handleSendInvite}
                     style={{
                       padding: '0 4px',
-                      marginTop: 2
-                    }}>
+                      marginTop: 2,
+                    }}
+                  >
                     {t('Resend invite')}
-                  </Button>}
-              </div>
-            : !has2fa
-                ? <span
-                    style={{color: '#B64236'}}
-                    className="icon-exclamation tip"
-                    title={t('Two-factor auth not enabled')}
-                  />
-                : null}
+                  </Button>
+                )}
+            </div>
+          ) : !has2fa ? (
+            <span
+              style={{color: '#B64236'}}
+              className="icon-exclamation tip"
+              title={t('Two-factor auth not enabled')}
+            />
+          ) : null}
         </td>
 
         <td className="squash">{roleName}</td>
-        {showRemoveButton || showLeaveButton
-          ? <td className="align-right squash">
-              <Button
-                style={{marginRight: 4}}
-                size="small"
-                to={`/organizations/${orgId}/members/${id}/`}>
-                {t('Details')}
-              </Button>
+        {showRemoveButton || showLeaveButton ? (
+          <td className="align-right squash">
+            <Button
+              style={{marginRight: 4}}
+              size="small"
+              to={`/organizations/${orgId}/members/${id}/`}
+            >
+              {t('Details')}
+            </Button>
 
-              {showRemoveButton &&
-                canRemoveMember &&
+            {showRemoveButton &&
+              canRemoveMember && (
                 <Confirm
                   message={tct('Are you sure you want to remove [name] from [orgName]?', {
                     name,
-                    orgName
+                    orgName,
                   })}
                   onConfirm={this.handleRemove}
                   onSuccess={tct('Removed [name] from [orgName]', {
                     name,
-                    orgName
+                    orgName,
                   })}
                   onError={tct('Error removing [name] from [orgName]', {
                     name,
-                    orgName
-                  })}>
+                    orgName,
+                  })}
+                >
                   <Button priority="danger" size="small" busy={this.state.busy}>
                     <span className="icon icon-trash" /> {t('Remove')}
                   </Button>
-                </Confirm>}
+                </Confirm>
+              )}
 
-              {showRemoveButton &&
-                !canRemoveMember &&
+            {showRemoveButton &&
+              !canRemoveMember && (
                 <Button
                   disabled
                   size="small"
-                  title={t('You do not have access to remove member')}>
+                  title={t('You do not have access to remove member')}
+                >
                   <span className="icon icon-trash" /> {t('Remove')}
-                </Button>}
+                </Button>
+              )}
 
-              {showLeaveButton &&
-                memberCanLeave &&
+            {showLeaveButton &&
+              memberCanLeave && (
                 <Confirm
                   message={tct('Are you sure you want to leave [orgName]?', {
-                    orgName
+                    orgName,
                   })}
                   onConfirm={this.handleLeave}
                   onSuccess={tct('Left [orgName]', {
-                    orgName
+                    orgName,
                   })}
                   onError={tct('Error leaving [orgName]', {
-                    orgName
-                  })}>
+                    orgName,
+                  })}
+                >
                   <Button priority="danger" size="small" busy={this.state.busy}>
                     <span className="icon icon-exit" /> {t('Leave')}
                   </Button>
-                </Confirm>}
+                </Confirm>
+              )}
 
-              {showLeaveButton &&
-                !memberCanLeave &&
+            {showLeaveButton &&
+              !memberCanLeave && (
                 <Button
                   size="small"
                   disabled
                   title={t(
                     'You cannot leave the organization as you are the only owner.'
-                  )}>
+                  )}
+                >
                   <span className="icon icon-exit" /> {t('Leave')}
-                </Button>}
-            </td>
-          : null}
+                </Button>
+              )}
+          </td>
+        ) : null}
       </tr>
     );
   }

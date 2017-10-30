@@ -18,7 +18,7 @@ const SettingsActivity = React.createClass({
 
   getInitialState() {
     return {
-      activity: null
+      activity: null,
     };
   },
 
@@ -29,12 +29,8 @@ const SettingsActivity = React.createClass({
       return null;
     }
 
-    return (
-      <Container type={activity.type}>
-        {activity.message}
-      </Container>
-    );
-  }
+    return <Container type={activity.type}>{activity.message}</Container>;
+  },
 });
 
 export default SettingsActivity;

@@ -12,7 +12,7 @@ const SettingsIndicatorStore = Reflux.createStore({
   add(message, type, options = {}) {
     this.state = {
       message,
-      type
+      type,
     };
     this.trigger(this.state);
   },
@@ -23,7 +23,7 @@ const SettingsIndicatorStore = Reflux.createStore({
 
     this.state = null;
     this.trigger(this.state);
-  }
+  },
 });
 
 export default SettingsIndicatorStore;

@@ -55,23 +55,23 @@ const theme = {
   alert: {
     info: {
       background: '#F5FAFE',
-      border: '#B5D6ED'
+      border: '#B5D6ED',
     },
     warning: {
       background: '#FFFDF7',
-      border: '#E1D697'
+      border: '#E1D697',
     },
     success: {
       background: '#F8FCF7',
-      border: '#BBD6B3'
+      border: '#BBD6B3',
     },
     error: {
       background: '#FDF6F5',
       border: '#E7C0BC',
       textLight: '#92635f',
-      textDark: '#5d3e3b'
-    }
-  }
+      textDark: '#5d3e3b',
+    },
+  },
 };
 
 export default theme;

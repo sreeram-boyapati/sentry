@@ -1,7 +1,5 @@
 import styled from 'react-emotion';
 
-const PanelBody = styled.div`
-
-`;
+const PanelBody = styled.div``;
 
 export default PanelBody;

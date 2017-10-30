@@ -16,7 +16,7 @@ const OldOrganizationSettingsForm = React.createClass({
     orgId: PropTypes.string.isRequired,
     access: PropTypes.object.isRequired,
     initialData: PropTypes.object.isRequired,
-    onSave: PropTypes.func.isRequired
+    onSave: PropTypes.func.isRequired,
   },
 
   mixins: [ApiMixin],
@@ -25,7 +25,7 @@ const OldOrganizationSettingsForm = React.createClass({
     return {
       formData: this.buildFormData(this.props.initialData),
       errors: {},
-      hasChanges: false
+      hasChanges: false,
     };
   },
 
@@ -41,7 +41,7 @@ const OldOrganizationSettingsForm = React.createClass({
       dataScrubberDefaults: data.dataScrubberDefaults,
       scrubIPAddresses: data.scrubIPAddresses,
       safeFields: data.safeFields.join('\n'),
-      sensitiveFields: data.sensitiveFields.join('\n')
+      sensitiveFields: data.sensitiveFields.join('\n'),
     };
     if (this.props.access.has('org:admin')) {
       result.defaultRole = data.defaultRole;
@@ -52,11 +52,11 @@ const OldOrganizationSettingsForm = React.createClass({
   onFieldChange(name, value) {
     let formData = {
       ...this.state.formData,
-      [name]: value
+      [name]: value,
     };
     this.setState({
       hasChanges: true,
-      formData
+      formData,
     });
   },
 
@@ -70,7 +70,7 @@ const OldOrganizationSettingsForm = React.createClass({
     this.setState(
       {
         state: FormState.SAVING,
-        hasChanges: false
+        hasChanges: false,
       },
       () => {
         let loadingIndicator = IndicatorStore.add(t('Saving changes..'));
@@ -81,29 +81,29 @@ const OldOrganizationSettingsForm = React.createClass({
           data: {
             ...formData,
             safeFields: extractMultilineFields(formData.safeFields),
-            sensitiveFields: extractMultilineFields(formData.sensitiveFields)
+            sensitiveFields: extractMultilineFields(formData.sensitiveFields),
           },
           success: data => {
             this.props.onSave(data);
             this.setState({
               state: FormState.READY,
-              errors: {}
+              errors: {},
             });
             IndicatorStore.remove(loadingIndicator);
             IndicatorStore.add(t('Changes saved.'), 'success', {
-              duration: 1500
+              duration: 1500,
             });
           },
           error: error => {
             this.setState({
               state: FormState.ERROR,
-              errors: error.responseJSON
+              errors: error.responseJSON,
             });
             IndicatorStore.remove(loadingIndicator);
             IndicatorStore.add(t('Unable to save changes. Please try again.'), 'error', {
-              duration: 3000
+              duration: 3000,
             });
-          }
+          },
         });
       }
     );
@@ -143,13 +143,15 @@ const OldOrganizationSettingsForm = React.createClass({
         <div className="box-content with-padding">
           <form
             onSubmit={this.onSubmit}
-            className="form-stacked ref-organization-settings">
-            {this.state.state === FormState.ERROR &&
+            className="form-stacked ref-organization-settings"
+          >
+            {this.state.state === FormState.ERROR && (
               <div className="alert alert-error alert-block">
                 {t(
                   'Unable to save your changes. Please ensure all fields are valid and try again.'
                 )}
-              </div>}
+              </div>
+            )}
             <fieldset>
               <legend style={{marginTop: 0}}>{t('General')}</legend>
 
@@ -186,7 +188,7 @@ const OldOrganizationSettingsForm = React.createClass({
 
               <legend>{t('Membership')}</legend>
 
-              {access.has('org:admin') &&
+              {access.has('org:admin') && (
                 <Select2Field
                   key="defaultRole"
                   name="defaultRole"
@@ -197,7 +199,8 @@ const OldOrganizationSettingsForm = React.createClass({
                   required={true}
                   error={errors.defaultRole}
                   onChange={this.onFieldChange.bind(this, 'defaultRole')}
-                />}
+                />
+              )}
 
               <BooleanField
                 key="openMembership"
@@ -305,7 +308,8 @@ const OldOrganizationSettingsForm = React.createClass({
               <button
                 type="submit"
                 className="btn btn-primary"
-                disabled={isSaving || !this.state.hasChanges}>
+                disabled={isSaving || !this.state.hasChanges}
+              >
                 {t('Save Changes')}
               </button>
             </fieldset>
@@ -313,7 +317,7 @@ const OldOrganizationSettingsForm = React.createClass({
         </div>
       </div>
     );
-  }
+  },
 });
 
 export default OldOrganizationSettingsForm;

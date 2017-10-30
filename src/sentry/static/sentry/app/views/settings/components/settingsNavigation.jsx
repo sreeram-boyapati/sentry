@@ -8,11 +8,11 @@ import SentryTypes from '../../../proptypes';
 class SettingsNavigation extends React.Component {
   static propTypes = {
     hooks: PropTypes.array.isRequired,
-    navigationObjects: PropTypes.arrayOf(SentryTypes.NavigationObject).isRequired
+    navigationObjects: PropTypes.arrayOf(SentryTypes.NavigationObject).isRequired,
   };
 
   static defaultProps = {
-    hooks: []
+    hooks: [],
   };
 
   render() {

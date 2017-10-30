@@ -23,7 +23,7 @@ export default class Form extends React.Component {
     allowUndo: PropTypes.bool,
     saveOnBlur: PropTypes.bool,
     apiMethod: PropTypes.string,
-    apiEndpoint: PropTypes.string
+    apiEndpoint: PropTypes.string,
   };
 
   static defaultProps = {
@@ -34,12 +34,12 @@ export default class Form extends React.Component {
     className: 'form-stacked',
     requireChanges: false,
     allowUndo: false,
-    saveOnBlur: false
+    saveOnBlur: false,
   };
 
   static childContextTypes = {
     saveOnBlur: PropTypes.bool.isRequired,
-    form: PropTypes.object.isRequired
+    form: PropTypes.object.isRequired,
   };
 
   constructor(props, context) {
@@ -51,7 +51,7 @@ export default class Form extends React.Component {
       onSubmitSuccess,
       onSubmitError,
       initialData,
-      model
+      model,
     } = props;
 
     this.model = model || new FormModel();
@@ -61,7 +61,7 @@ export default class Form extends React.Component {
       onSubmitError,
       saveOnBlur,
       apiEndpoint,
-      apiMethod
+      apiMethod,
     });
 
     window.test = this.model;
@@ -70,7 +70,7 @@ export default class Form extends React.Component {
   getChildContext() {
     return {
       saveOnBlur: this.props.saveOnBlur,
-      form: this.model
+      form: this.model,
     };
   }
 
@@ -110,7 +110,7 @@ export default class Form extends React.Component {
       onCancel,
       extraButton,
       requireChanges,
-      saveOnBlur
+      saveOnBlur,
     } = this.props;
     let shouldShowFooter = !saveOnBlur;
 
@@ -118,7 +118,7 @@ export default class Form extends React.Component {
       <form onSubmit={this.onSubmit} className={className}>
         {children}
 
-        {shouldShowFooter &&
+        {shouldShowFooter && (
           <div className={footerClass} style={{marginTop: 25}}>
             <Observer>
               {() => (
@@ -126,22 +126,25 @@ export default class Form extends React.Component {
                   priority="primary"
                   disabled={
                     this.model.isError ||
-                      isSaving ||
-                      submitDisabled ||
-                      (requireChanges ? !this.model.formChanged : false)
+                    isSaving ||
+                    submitDisabled ||
+                    (requireChanges ? !this.model.formChanged : false)
                   }
-                  type="submit">
+                  type="submit"
+                >
                   {submitLabel}
                 </Button>
               )}
             </Observer>
 
-            {onCancel &&
+            {onCancel && (
               <Button disabled={isSaving} onClick={onCancel} style={{marginLeft: 5}}>
                 {cancelLabel}
-              </Button>}
+              </Button>
+            )}
             {extraButton}
-          </div>}
+          </div>
+        )}
       </form>
     );
   }

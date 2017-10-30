@@ -12,15 +12,15 @@ import IconWarningSm from '../../../icons/icon-warning-sm';
 import Spinner from './styled/spinner';
 
 const SettingsPanelItemWrapper = styled(Flex)`
-    padding: 15px 20px;
-    border-bottom: 1px solid ${p => p.theme.borderLight};
-    align-items: center;
-    transition: background .15s;
+  padding: 15px 20px;
+  border-bottom: 1px solid ${p => p.theme.borderLight};
+  align-items: center;
+  transition: background 0.15s;
 
-    &:last-child {
-      border-bottom: none;
-    }
-  `;
+  &:last-child {
+    border-bottom: none;
+  }
+`;
 
 const SettingsPanelItemLabel = styled.div`
   color: ${p => p.theme.gray5};
@@ -69,7 +69,7 @@ const SettingsErrorReason = styled.div`
   font-weight: 600;
   font-size: 12px;
   border-radius: 3px;
-  box-shadow: 0 0 0 1px rgba(64,11,54,0.15), 0 4px 20px 0 rgba(64,11,54,0.36);
+  box-shadow: 0 0 0 1px rgba(64, 11, 54, 0.15), 0 4px 20px 0 rgba(64, 11, 54, 0.36);
   z-index: 10000;
 `;
 const fadeOut = keyframes`
@@ -102,7 +102,7 @@ const SettingsError = styled.div`
 
 const SettingsIsSaved = styled.div`
   color: ${p => p.theme.green};
-  animation: ${fadeOut} .3s ease 2s 1 forwards;
+  animation: ${fadeOut} 0.3s ease 2s 1 forwards;
 `;
 
 /**
@@ -116,7 +116,7 @@ const getValueFromEvent = (valueOrEvent, e) => {
 
   return {
     value,
-    event
+    event,
   };
 };
 
@@ -140,17 +140,17 @@ class FormField extends React.Component {
     onMouseOver: PropTypes.func,
     onMouseOut: PropTypes.func,
     error: PropTypes.string,
-    value: PropTypes.any
+    value: PropTypes.any,
   };
 
   static defaultProps = {
     hideErrorMessage: false,
     disabled: false,
-    required: false
+    required: false,
   };
 
   static contextTypes = {
-    form: PropTypes.object
+    form: PropTypes.object,
   };
 
   componentDidMount() {
@@ -239,14 +239,14 @@ class FormField extends React.Component {
     return (
       <SettingsPanelItemWrapper>
         <SettingsPanelItemDesc>
-          {label &&
+          {label && (
             <SettingsPanelItemLabel>
               {label} {required && <SettingsRequiredBadge />}
-            </SettingsPanelItemLabel>}
+            </SettingsPanelItemLabel>
+          )}
           {help && <SettingsPanelItemHelp>{help}</SettingsPanelItemHelp>}
         </SettingsPanelItemDesc>
         <SettingsPanelItemCtrl>
-
           <Observer>
             {() => {
               let error = this.getError();
@@ -263,7 +263,7 @@ class FormField extends React.Component {
                     onChange: this.handleChange,
                     onBlur: this.handleBlur,
                     value,
-                    error
+                    error,
                   }}
                 />
               );
@@ -271,10 +271,11 @@ class FormField extends React.Component {
           </Observer>
 
           {disabled &&
-            disabledReason &&
-            <span className="disabled-indicator tip" title={disabledReason}>
-              <span className="icon-question" />
-            </span>}
+            disabledReason && (
+              <span className="disabled-indicator tip" title={disabledReason}>
+                <span className="icon-question" />
+              </span>
+            )}
 
           <Observer>
             {() => {
@@ -286,7 +287,6 @@ class FormField extends React.Component {
           </Observer>
         </SettingsPanelItemCtrl>
         <SettingsPanelItemCtrlState>
-
           <Observer>
             {() => {
               let isSaving = model.getFieldState(this.props.name, FormState.SAVING);
@@ -295,7 +295,11 @@ class FormField extends React.Component {
               if (isSaving) {
                 return <Spinner />;
               } else if (isSaved) {
-                return <SettingsIsSaved><IconCheckmarkSm size="18" /></SettingsIsSaved>;
+                return (
+                  <SettingsIsSaved>
+                    <IconCheckmarkSm size="18" />
+                  </SettingsIsSaved>
+                );
               }
 
               return null;

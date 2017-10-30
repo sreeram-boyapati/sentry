@@ -3,7 +3,7 @@ import React from 'react';
 
 import {
   addErrorMessage,
-  addSuccessMessage
+  addSuccessMessage,
 } from '../../../actionCreators/settingsIndicator';
 import {t} from '../../../locale';
 import AsyncView from '../../asyncView';
@@ -15,7 +15,7 @@ export default class TeamSettings extends AsyncView {
   static propTypes = {
     ...AsyncView.propTypes,
     team: PropTypes.object.isRequired,
-    onTeamChange: PropTypes.func.isRequired
+    onTeamChange: PropTypes.func.isRequired,
   };
 
   constructor(props, context) {
@@ -44,8 +44,9 @@ export default class TeamSettings extends AsyncView {
             onSubmitError={() => addErrorMessage('Unable to save change', 3000)}
             initialData={{
               name: team.name,
-              slug: team.slug
-            }}>
+              slug: team.slug,
+            }}
+          >
             <TextField
               name="name"
               label={t('Name')}

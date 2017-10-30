@@ -7,7 +7,12 @@ const SettingsHeader = styled(Flex)`
   top: 0;
   height: 105px;
   width: 928px;
-  background-image: linear-gradient(to bottom, #fcfcfc 0%,#fcfcfc 80%,rgba(255,255,255, .2) 100%);
+  background-image: linear-gradient(
+    to bottom,
+    #fcfcfc 0%,
+    #fcfcfc 80%,
+    rgba(255, 255, 255, 0.2) 100%
+  );
   z-index: 1000000;
 `;
 

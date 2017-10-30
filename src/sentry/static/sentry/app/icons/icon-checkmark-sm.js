@@ -9,7 +9,8 @@ function IconCheckmarkSm(props) {
         strokeWidth="1"
         fill="none"
         strokeLinecap="round"
-        strokeLinejoin="round">
+        strokeLinejoin="round"
+      >
         <polyline points="0.5 5 2.5 7 8.5 2" />
       </g>
     </Icon>

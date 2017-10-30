@@ -6,7 +6,7 @@ class TeamFormModel extends FormModel {
     return updateTeam(this.api, {
       orgId: this.orgId,
       teamId: this.teamId,
-      data
+      data,
     });
   }
 }

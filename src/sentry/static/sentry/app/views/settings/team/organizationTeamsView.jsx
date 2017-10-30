@@ -19,7 +19,7 @@ class OrganizationTeamsView extends React.Component {
     features: PropTypes.object,
     route: PropTypes.object,
     routes: PropTypes.array,
-    params: PropTypes.object
+    params: PropTypes.object,
   };
 
   render() {
@@ -32,7 +32,7 @@ class OrganizationTeamsView extends React.Component {
       features,
       route,
       routes,
-      params
+      params,
     } = this.props;
     let org = organization;
 
@@ -45,33 +45,32 @@ class OrganizationTeamsView extends React.Component {
         <div className="col-md-9">
           <div className="team-list">
             <ul className="nav nav-tabs border-bottom">
-              <ListLink to={`${urlPrefix}teams/`}>
-                {t('Your Teams')}
-              </ListLink>
+              <ListLink to={`${urlPrefix}teams/`}>{t('Your Teams')}</ListLink>
               <ListLink to={`${urlPrefix}all-teams/`}>
-                {t('All Teams')}
-                {' '}
+                {t('All Teams')}{' '}
                 <span className="badge badge-soft">{allTeams.length}</span>
               </ListLink>
             </ul>
-            {route.allTeams /* should be AllTeamsList */
-              ? <AllTeamsList
-                  urlPrefix={urlPrefix}
-                  organization={org}
-                  teamList={allTeams}
-                  access={access}
-                  openMembership={
-                    features.has('open-membership') || access.has('org:write')
-                  }
-                />
-              : <ExpandedTeamList
-                  urlPrefix={urlPrefix}
-                  organization={org}
-                  teamList={activeTeams}
-                  projectStats={projectStats}
-                  hasTeams={allTeams.length !== 0}
-                  access={access}
-                />}
+            {route.allTeams /* should be AllTeamsList */ ? (
+              <AllTeamsList
+                urlPrefix={urlPrefix}
+                organization={org}
+                teamList={allTeams}
+                access={access}
+                openMembership={
+                  features.has('open-membership') || access.has('org:write')
+                }
+              />
+            ) : (
+              <ExpandedTeamList
+                urlPrefix={urlPrefix}
+                organization={org}
+                teamList={activeTeams}
+                projectStats={projectStats}
+                hasTeams={allTeams.length !== 0}
+                access={access}
+              />
+            )}
           </div>
         </div>
         <OrganizationStatOverview

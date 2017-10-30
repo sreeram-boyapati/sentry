@@ -9,7 +9,7 @@ export function fetchTeams(api, params) {
     },
     error: error => {
       TeamActions.fetchAllError(params.orgId, error);
-    }
+    },
   });
 }
 
@@ -21,7 +21,7 @@ export function fetchTeamDetails(api, params) {
     },
     error: error => {
       TeamActions.fetchDetailsError(params.teamId, error);
-    }
+    },
   });
 }
 
@@ -38,12 +38,13 @@ export function updateTeam(api, params) {
     },
     error: data => {
       TeamActions.updateError(id, params.teamId, data);
-    }
+    },
   });
 }
 
 export function joinTeam(api, params) {
-  let endpoint = `/organizations/${params.orgId}/members/${params.memberId || 'me'}/teams/${params.teamId}/`;
+  let endpoint = `/organizations/${params.orgId}/members/${params.memberId ||
+    'me'}/teams/${params.teamId}/`;
   let id = api.uniqueId();
 
   TeamActions.update(id, params.teamId);
@@ -56,12 +57,13 @@ export function joinTeam(api, params) {
     },
     error: data => {
       TeamActions.updateError(id, params.teamId, data);
-    }
+    },
   });
 }
 
 export function leaveTeam(api, params) {
-  let endpoint = `/organizations/${params.orgId}/members/${params.memberId || 'me'}/teams/${params.teamId}/`;
+  let endpoint = `/organizations/${params.orgId}/members/${params.memberId ||
+    'me'}/teams/${params.teamId}/`;
   let id = api.uniqueId();
 
   TeamActions.update(id, params.teamId);
@@ -73,6 +75,6 @@ export function leaveTeam(api, params) {
     },
     error: data => {
       TeamActions.updateError(id, params.teamId, data);
-    }
+    },
   });
 }

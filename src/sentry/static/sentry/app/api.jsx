@@ -124,7 +124,7 @@ export class Client {
           reject(error);
           if (typeof options.error !== 'function') return;
           options.error(error, ...args);
-        }
+        },
       });
     });
   }

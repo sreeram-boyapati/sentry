@@ -17,7 +17,7 @@ const ProjectSettingsNavigation = React.createClass({
     });
 
     return {
-      hooks
+      hooks,
     };
   },
 
@@ -37,7 +37,7 @@ const ProjectSettingsNavigation = React.createClass({
         hooks={this.state.hooks}
       />
     );
-  }
+  },
 });
 
 export default ProjectSettingsNavigation;

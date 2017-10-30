@@ -4,16 +4,12 @@ import styled from 'react-emotion';
 class SettingsPageHeading extends React.Component {
   render() {
     // Todo(ckj) support tabs and right-aligned action item
-    return (
-      <Wrapper>
-        {this.props.label && <Label>{this.props.label}</Label>}
-      </Wrapper>
-    );
+    return <Wrapper>{this.props.label && <Label>{this.props.label}</Label>}</Wrapper>;
   }
 }
 
 SettingsPageHeading.propTypes = {
-  label: React.PropTypes.string
+  label: React.PropTypes.string,
 };
 
 const Wrapper = styled.div`
@@ -26,7 +22,7 @@ const Wrapper = styled.div`
 const Label = styled.div`
   font-weight: bold;
   padding-bottom: 14px;
-  border-bottom: 3px solid ${p => p.theme.purple}
+  border-bottom: 3px solid ${p => p.theme.purple};
 `;
 
 export default SettingsPageHeading;

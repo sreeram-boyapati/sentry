@@ -12,7 +12,7 @@ import SpreadLayout from '../../../../components/spreadLayout';
 
 class OrganizationProjectsView extends OrganizationSettingsView {
   static contextTypes = {
-    organization: SentryTypes.Organization
+    organization: SentryTypes.Organization,
   };
 
   getTitle() {
@@ -53,7 +53,7 @@ const OrganizationProjectsViewContainer = React.createClass({
 
   getInitialState() {
     return {
-      projects: Array.from(ProjectStore.getAll().values())
+      projects: Array.from(ProjectStore.getAll().values()),
     };
   },
 
@@ -63,21 +63,21 @@ const OrganizationProjectsViewContainer = React.createClass({
       query: {
         since: new Date().getTime() / 1000 - 3600 * 24,
         stat: 'generated',
-        group: 'project'
-      }
+        group: 'project',
+      },
     });
   },
 
   onProjectUpdate(projects) {
     // loadInitialData returns a list of ids
     this.setState({
-      projects: Array.from(ProjectStore.getAll().values())
+      projects: Array.from(ProjectStore.getAll().values()),
     });
   },
 
   render() {
     return <OrganizationProjectsView projects={this.state.projects} />;
-  }
+  },
 });
 
 export default OrganizationProjectsViewContainer;

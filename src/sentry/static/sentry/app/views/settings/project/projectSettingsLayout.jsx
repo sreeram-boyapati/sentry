@@ -7,7 +7,7 @@ import SentryTypes from '../../../proptypes';
 
 class ProjectSettingsLayout extends React.Component {
   static contextTypes = {
-    organization: SentryTypes.Organization
+    organization: SentryTypes.Organization,
   };
 
   render() {
@@ -17,14 +17,13 @@ class ProjectSettingsLayout extends React.Component {
       <ProjectContext {...this.props.params} orgId={orgId} projectId={projectId}>
         <SettingsLayout
           {...this.props}
-          renderNavigation={() => <ProjectSettingsNavigation {...this.props} />}>
-
+          renderNavigation={() => <ProjectSettingsNavigation {...this.props} />}
+        >
           {this.props.children &&
             React.cloneElement(this.props.children, {
               organization: this.context.organization,
-              setProjectNavSection: () => {}
+              setProjectNavSection: () => {},
             })}
-
         </SettingsLayout>
       </ProjectContext>
     );

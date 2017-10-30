@@ -74,21 +74,25 @@ class FormModel {
   /**
    * Deep equality comparison between last saved state and current fields state
    */
-  @computed get formChanged() {
+  @computed
+  get formChanged() {
     return !_.isEqual(this.initialData, this.fields.toJSON(), true);
   }
 
-  @computed get formData() {
+  @computed
+  get formData() {
     return this.fields;
   }
 
   /** Is form saving */
-  @computed get isSaving() {
+  @computed
+  get isSaving() {
     return this.formState === FormState.SAVING;
   }
 
   /** Does form have any errors */
-  @computed get isError() {
+  @computed
+  get isError() {
     return !!this.errors.size;
   }
 
@@ -185,12 +189,13 @@ class FormModel {
         method,
         data,
         success: response => resolve(response),
-        error: error => reject(error)
+        error: error => reject(error),
       });
     });
   }
 
-  @action setValue(id, value) {
+  @action
+  setValue(id, value) {
     this.fields.set(id, value);
 
     // specifically check for empty string, 0 should be allowed
@@ -201,7 +206,8 @@ class FormModel {
     }
   }
 
-  @action undo() {
+  @action
+  undo() {
     // Always have initial data snapshot
     if (this.snapshots.length < 2) return;
 
@@ -218,7 +224,8 @@ class FormModel {
    * If successful then: 1) reset save state, 2) update `initialData`, 3) save snapshot, 4) handle callbacks
    * If failed then: 1) reset save state, 2) add error state, 3) handle callbacks
    */
-  @action saveField(id, currentValue) {
+  @action
+  saveField(id, currentValue) {
     // Nothing to do if `saveOnBlur` is not on
     if (!this.options.saveOnBlur) return null;
 
@@ -242,9 +249,8 @@ class FormModel {
 
     // Transform data before saving, this uses `getValue` defined when declaring the form
     let fieldDescriptor = this.fieldDescriptor.get(id);
-    let serializer = typeof fieldDescriptor.getValue === 'function'
-      ? fieldDescriptor.getValue
-      : a => a;
+    let serializer =
+      typeof fieldDescriptor.getValue === 'function' ? fieldDescriptor.getValue : a => a;
 
     return this.doApiRequest({data: {[id]: serializer(newValue)}})
       .then(data => {
@@ -279,10 +285,11 @@ class FormModel {
       });
   }
 
-  @action setFieldState(id, key, value) {
+  @action
+  setFieldState(id, key, value) {
     let state = {
       ...(this.fieldState.get(id) || {}),
-      [key]: value
+      [key]: value,
     };
     this.fieldState.set(id, state);
   }
@@ -290,7 +297,8 @@ class FormModel {
   /**
    * Set "saving" state for field
    */
-  @action setSaving(id, value) {
+  @action
+  setSaving(id, value) {
     // When saving, reset error state
     this.setError(id, false);
     this.setFieldState(id, FormState.SAVING, value);
@@ -300,7 +308,8 @@ class FormModel {
   /**
    * Set "error" state for field
    */
-  @action setError(id, error) {
+  @action
+  setError(id, error) {
     // Note we don't keep error in `this.fieldState` so that we can easily
     // See if the form is in an "error" state with the `isError` getter
     if (!!error) {
@@ -315,20 +324,24 @@ class FormModel {
     this.setFieldState(id, FormState.SAVING, false);
   }
 
-  @action getData() {
+  @action
+  getData() {
     return this.fields;
   }
 
   // TODO: More validations
-  @action validate() {}
+  @action
+  validate() {}
 
-  @action submitSuccess(data) {
+  @action
+  submitSuccess(data) {
     // update initial data
     this.formState = FormState.READY;
     this.initialData = data;
   }
 
-  @action submitError(err) {
+  @action
+  submitError(err) {
     this.formState = FormState.ERROR;
     this.formErrors = err.responseJSON;
   }

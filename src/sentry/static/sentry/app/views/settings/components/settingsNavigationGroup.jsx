@@ -24,12 +24,12 @@ export default class NavigationGroup extends React.Component {
     organization: SentryTypes.Organization,
     project: SentryTypes.Project,
     access: PropTypes.object,
-    features: PropTypes.object
+    features: PropTypes.object,
   };
 
   static contextTypes = {
     router: PropTypes.object,
-    location: PropTypes.object
+    location: PropTypes.object,
   };
 
   render() {
@@ -45,7 +45,7 @@ export default class NavigationGroup extends React.Component {
           let badgeResult = typeof badge === 'function' ? badge(this.props) : null;
           let to = replaceRouterParams(path, {
             orgId: organization && organization.slug,
-            projectId: project && project.slug
+            projectId: project && project.slug,
           });
 
           return (

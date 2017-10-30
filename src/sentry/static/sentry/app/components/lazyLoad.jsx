@@ -9,13 +9,13 @@ class LazyLoad extends React.Component {
     /**
      * specifically needs to be a thenable
      */
-    component: PropTypes.func
+    component: PropTypes.func,
   };
 
   constructor(...args) {
     super(...args);
     this.state = {
-      Component: null
+      Component: null,
     };
   }
 

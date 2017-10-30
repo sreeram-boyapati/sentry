@@ -4,11 +4,10 @@ import React from 'react';
 import FormField from './formField';
 import Input from './styled/input';
 
-
 export default class InputField extends React.Component {
   static propTypes = {
     ...FormField.propTypes,
-    field: PropTypes.func.isRequired
+    field: PropTypes.func.isRequired,
   };
 
   static defaultProps = {
@@ -18,7 +17,7 @@ export default class InputField extends React.Component {
         onBlur={e => onBlur(e.target.value, e)}
         onChange={e => onChange(e.target.value, e)}
       />
-    )
+    ),
   };
 
   render() {
@@ -29,7 +28,7 @@ export default class InputField extends React.Component {
         {({children, ...formFieldProps}) => {
           return field({
             ...otherProps,
-            ...formFieldProps
+            ...formFieldProps,
           });
         }}
       </FormField>

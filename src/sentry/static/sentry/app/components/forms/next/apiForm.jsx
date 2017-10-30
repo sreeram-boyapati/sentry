@@ -11,7 +11,7 @@ export default class ApiForm extends React.Component {
     ...Form.propTypes,
     onSubmit: PropTypes.func,
     apiMethod: PropTypes.string.isRequired,
-    apiEndpoint: PropTypes.string.isRequired
+    apiEndpoint: PropTypes.string.isRequired,
   };
 
   constructor(props, context) {
@@ -36,7 +36,7 @@ export default class ApiForm extends React.Component {
       error: error => {
         IndicatorStore.remove(loadingIndicator);
         onError(error);
-      }
+      },
     });
   };
 

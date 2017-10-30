@@ -18,11 +18,8 @@ const StyledPanelHeaderHeading = styled(PanelHeading)`
 class PanelHeader extends React.Component {
   render() {
     return (
-
       <StyledPanelHeader>
-        <StyledPanelHeaderHeading>
-          {this.props.children}
-        </StyledPanelHeaderHeading>
+        <StyledPanelHeaderHeading>{this.props.children}</StyledPanelHeaderHeading>
       </StyledPanelHeader>
     );
   }

@@ -4,7 +4,7 @@ import React from 'react';
 
 import {
   addErrorMessage,
-  addSuccessMessage
+  addSuccessMessage,
 } from '../../../../actionCreators/settingsIndicator';
 import {extractMultilineFields} from '../../../../utils';
 import {t} from '../../../../locale';
@@ -23,7 +23,7 @@ const NewOrganizationSettingsForm = React.createClass({
     orgId: PropTypes.string.isRequired,
     access: PropTypes.object.isRequired,
     initialData: PropTypes.object.isRequired,
-    onSave: PropTypes.func.isRequired
+    onSave: PropTypes.func.isRequired,
   },
 
   mixins: [ApiMixin],
@@ -63,15 +63,13 @@ const NewOrganizationSettingsForm = React.createClass({
         allowUndo
         initialData={initialData}
         onSubmitSuccess={() => addSuccessMessage('Change saved', 3000)}
-        onSubmitError={() => addErrorMessage('Unable to save change', 3000)}>
+        onSubmitError={() => addErrorMessage('Unable to save change', 3000)}
+      >
         <Box>
           <Panel>
-            <PanelHeader>
-              {t('General')}
-            </PanelHeader>
+            <PanelHeader>{t('General')}</PanelHeader>
 
             <PanelBody>
-
               <TextField
                 name="name"
                 label={t('Name')}
@@ -93,13 +91,10 @@ const NewOrganizationSettingsForm = React.createClass({
           </Panel>
 
           <Panel>
-            <PanelHeader>
-              {t('Membership')}
-            </PanelHeader>
+            <PanelHeader>{t('Membership')}</PanelHeader>
 
             <PanelBody>
-
-              {access.has('org:admin') &&
+              {access.has('org:admin') && (
                 <Select2Field
                   name="defaultRole"
                   label={t('Default Role')}
@@ -107,7 +102,8 @@ const NewOrganizationSettingsForm = React.createClass({
                   getValue={val => (this.props.access.has('org:admin') ? val : undefined)}
                   help={t('The default role new members will receive.')}
                   required
-                />}
+                />
+              )}
 
               <BooleanField
                 name="openMembership"
@@ -119,12 +115,9 @@ const NewOrganizationSettingsForm = React.createClass({
           </Panel>
 
           <Panel>
-            <PanelHeader>
-              {t('Security & Privacy')}
-            </PanelHeader>
+            <PanelHeader>{t('Security & Privacy')}</PanelHeader>
 
             <PanelBody>
-
               <BooleanField
                 name="allowSharedIssues"
                 label={t('Allow Shared Issues')}
@@ -188,7 +181,7 @@ const NewOrganizationSettingsForm = React.createClass({
         </Box>
       </Form>
     );
-  }
+  },
 });
 
 export default NewOrganizationSettingsForm;

@@ -11,7 +11,7 @@ export default class Select2Field extends React.Component {
     allowClear: PropTypes.bool,
     allowEmpty: PropTypes.bool,
     multiple: PropTypes.bool,
-    escapeMarkup: PropTypes.bool
+    escapeMarkup: PropTypes.bool,
   };
 
   static defaultProps = {
@@ -20,12 +20,14 @@ export default class Select2Field extends React.Component {
     allowEmpty: false,
     placeholder: '--',
     escapeMarkup: true,
-    multiple: false
+    multiple: false,
   };
 
   componentWillUnmount() {
     if (this.select) {
-      jQuery(this.select).off('change').select2('destroy');
+      jQuery(this.select)
+        .off('change')
+        .select2('destroy');
     }
   }
 
@@ -54,7 +56,9 @@ export default class Select2Field extends React.Component {
         .select2(this.getSelect2Options())
         .on('change', this.onChange.bind(this, onBlur, onChange));
     } else {
-      jQuery(this.select).select2('destroy').off('change');
+      jQuery(this.select)
+        .select2('destroy')
+        .off('change');
     }
 
     this.select = ref;
@@ -65,7 +69,7 @@ export default class Select2Field extends React.Component {
       allowClear: this.props.allowClear,
       allowEmpty: this.props.allowEmpty,
       width: 'element',
-      escapeMarkup: !this.props.escapeMarkup ? m => m : undefined
+      escapeMarkup: !this.props.escapeMarkup ? m => m : undefined,
     };
   }
 
@@ -78,7 +82,8 @@ export default class Select2Field extends React.Component {
             ref={ref => this.handleSelectMount(onBlur, onChange, ref)}
             style={{width: '100%'}}
             onChange={() => {}}
-            value={props.value}>
+            value={props.value}
+          >
             {(props.choices || []).map(choice => {
               return (
                 <option key={choice[0]} value={choice[0]}>

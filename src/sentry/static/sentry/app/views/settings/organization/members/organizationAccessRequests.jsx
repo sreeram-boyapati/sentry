@@ -11,16 +11,16 @@ class OrganizationAccessRequests extends React.Component {
       PropTypes.shape({
         id: PropTypes.string.isRequired,
         member: SentryTypes.Member,
-        team: SentryTypes.Team
+        team: SentryTypes.Team,
       })
     ),
     accessRequestBusy: PropTypes.object,
     onApprove: PropTypes.func.isRequired,
-    onDeny: PropTypes.func.isRequired
+    onDeny: PropTypes.func.isRequired,
   };
 
   static defaultProps = {
-    requestList: []
+    requestList: [],
   };
 
   handleApprove = (id, e) => {
@@ -57,7 +57,7 @@ class OrganizationAccessRequests extends React.Component {
                   <td>
                     {tct('[name] requests access to the [team] team.', {
                       name: <strong>{displayName}</strong>,
-                      team: <strong>{team.name}</strong>
+                      team: <strong>{team.name}</strong>,
                     })}
                   </td>
                   <td className="align-right">
@@ -66,13 +66,15 @@ class OrganizationAccessRequests extends React.Component {
                       busy={accessRequestBusy.get(id)}
                       priority="primary"
                       style={{marginRight: 4}}
-                      size="small">
+                      size="small"
+                    >
                       {t('Approve')}
                     </Button>
                     <Button
                       busy={accessRequestBusy.get(id)}
                       onClick={e => this.handleDeny(id, e)}
-                      size="small">
+                      size="small"
+                    >
                       {t('Deny')}
                     </Button>
                   </td>
