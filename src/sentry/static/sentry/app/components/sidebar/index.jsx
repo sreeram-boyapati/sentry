@@ -24,7 +24,7 @@ const OnboardingStatus = React.createClass({
     currentPanel: PropTypes.string,
     onShowPanel: PropTypes.func,
     showPanel: PropTypes.bool,
-    hidePanel: PropTypes.func
+    hidePanel: PropTypes.func,
   },
 
   render() {
@@ -40,7 +40,7 @@ const OnboardingStatus = React.createClass({
     ).toString();
 
     let style = {
-      height: percentage + '%'
+      height: percentage + '%',
     };
 
     if (doneTasks.length >= TodoList.TASKS.filter(task => task.display).length) {
@@ -51,7 +51,8 @@ const OnboardingStatus = React.createClass({
       <li
         className={
           this.props.currentPanel == 'todos' ? 'onboarding active' : 'onboarding'
-        }>
+        }
+      >
         <div className="onboarding-progress-bar" onClick={this.props.onShowPanel}>
           <div className="slider" style={style} />
         </div>
@@ -59,13 +60,14 @@ const OnboardingStatus = React.createClass({
           this.props.currentPanel == 'todos' && (
             <SidebarPanel
               title="Getting Started with Sentry"
-              hidePanel={this.props.hidePanel}>
+              hidePanel={this.props.hidePanel}
+            >
               <TodoList />
             </SidebarPanel>
           )}
       </li>
     );
-  }
+  },
 });
 
 function getFirstRequiredAdminAction(org) {
@@ -80,14 +82,14 @@ function getFirstRequiredAdminAction(org) {
 
 const Sidebar = React.createClass({
   contextTypes: {
-    location: PropTypes.object
+    location: PropTypes.object,
   },
 
   mixins: [ApiMixin, OrganizationState],
 
   getInitialState: function() {
     return {
-      showTodos: location.hash === '#welcome'
+      showTodos: location.hash === '#welcome',
     };
   },
 
@@ -134,14 +136,14 @@ const Sidebar = React.createClass({
   hidePanel() {
     this.setState({
       showPanel: false,
-      currentPanel: ''
+      currentPanel: '',
     });
   },
 
   showPanel(panel) {
     this.setState({
       showPanel: true,
-      currentPanel: panel
+      currentPanel: panel,
     });
   },
 
@@ -224,7 +226,8 @@ const Sidebar = React.createClass({
                 !config.isOnPremise
                   ? `/organizations/${org.slug}/support/`
                   : 'https://forum.sentry.io/'
-              }>
+              }
+            >
               <span className="icon icon-support" />
             </a>
           </li>
@@ -239,7 +242,7 @@ const Sidebar = React.createClass({
                 query={{
                   statsPeriod: '24h',
                   per_page: 10,
-                  status: 'unresolved'
+                  status: 'unresolved',
                 }}
                 pagination={false}
                 renderEmpty={() => (
@@ -261,7 +264,7 @@ const Sidebar = React.createClass({
                 query={{
                   statsPeriod: '24h',
                   per_page: 10,
-                  status: 'unresolved'
+                  status: 'unresolved',
                 }}
                 pagination={false}
                 renderEmpty={() => (
@@ -283,7 +286,7 @@ const Sidebar = React.createClass({
                 query={{
                   statsPeriod: '24h',
                   per_page: 10,
-                  status: 'unresolved'
+                  status: 'unresolved',
                 }}
                 pagination={false}
                 renderEmpty={() => (
@@ -351,7 +354,7 @@ const Sidebar = React.createClass({
         {this.renderRequiredActions()}
       </nav>
     );
-  }
+  },
 });
 
 export default Sidebar;
